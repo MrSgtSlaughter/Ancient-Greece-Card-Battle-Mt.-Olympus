@@ -1426,6 +1426,12 @@ function renderTitle(){
 
 /* ─── NAME ENTRY ─── */
 function renderNameEntry(){
+  // Defensive: ensure preload screen is gone
+  var pre=document.getElementById('preloadScreen');
+  if(pre)pre.style.display='none';
+  // Preserve any name the student has already typed before re-render
+  var nameEl=document.getElementById('nameIn');
+  if(nameEl&&nameEl.value.trim())G.playerName=nameEl.value.trim();
   R.innerHTML=`
   <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;
     justify-content:center;padding:20px;text-align:center;">
@@ -1436,19 +1442,24 @@ function renderNameEntry(){
       text-transform:uppercase;letter-spacing:2px;">Select Class Period:</div>
     <div class="period-btns" style="margin-bottom:24px;">
       ${['1st','2nd','5th','6th'].map(p=>`
-        <button type="button" class="btn ${G.period===p?'primary':''}" onclick="G.period='${p}';render();">
+        <button type="button" class="btn ${G.period===p?'primary':''}" onclick="G.period='${p}';renderNameEntry();">
           ${p} Hour
         </button>`).join('')}
     </div>
     <button type="button" class="btn primary" onclick="confirmName()">CONTINUE ▶</button>
     <button type="button" class="btn" onclick="G.screen='title';render();" style="margin-top:8px;">◀ BACK</button>
   </div>`;
+  // Move cursor to end of pre-filled name so student can edit easily
+  var inp=document.getElementById('nameIn');
+  if(inp&&inp.value){inp.focus();var v=inp.value;inp.value='';inp.value=v;}
 }
 async function confirmName(){
   let n=document.getElementById('nameIn').value.trim();
   if(!n){alert('Please enter your name!');return;}
   if(!G.period){alert('Please select a class period!');return;}
   G.playerName=n;
+  var pre=document.getElementById('preloadScreen');
+  if(pre)pre.style.display='none';
   R.innerHTML=`<div style="text-align:center;padding:60px;font-size:8px;color:var(--gold);">
     LOADING...<br><span class="cursor">_</span>
     <div style="margin-top:16px;font-size:5.5px;color:#445;line-height:2;">
