@@ -315,11 +315,21 @@ input::placeholder{color:#3344aa;}
 .cursor{animation:blink 1s infinite;}
 .fdmg{position:fixed;font-family:'Press Start 2P',monospace;font-size:14px;
   pointer-events:none;animation:floatUp 1s forwards;z-index:999;}
+#musicBtn{
+  position:fixed;bottom:14px;right:14px;z-index:600;
+  font-family:'Press Start 2P',monospace;font-size:7px;
+  padding:8px 12px;border:1px solid rgba(255,215,0,.45);
+  background:rgba(5,5,20,.82);color:#FFD700;
+  cursor:pointer;border-radius:4px;letter-spacing:1px;
+  transition:border-color .15s,background .15s;
+}
+#musicBtn:hover{border-color:#FFD700;background:rgba(20,20,50,.95);}
 </style>
 </head>
 <body>
 <div id="bgLayer" style="position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;"></div>
 <div id="game" style="position:relative;z-index:1;max-width:820px;margin:0 auto;padding:8px;"></div>
+<button id="musicBtn" onclick="toggleMusic()" title="Toggle background music">♪ MUSIC</button>
 <script>
 'use strict';
 const FIREBASE='https://minigolf-fd9ea-default-rtdb.firebaseio.com';
@@ -414,7 +424,7 @@ const SFX_MAP={
   fight:     'dice-shake-1.ogg',
   deal:      'card-fan-1.ogg',
 };
-let _musicEl=null, _musicIdx=-1, _audioOn=false, _bgIdx=0;
+let _musicEl=null, _musicIdx=-1, _audioOn=false, _bgIdx=0, _musicMuted=false;
 
 function initAudio(){
   if(_audioOn)return;
@@ -422,7 +432,6 @@ function initAudio(){
   _musicEl=new Audio();
   _musicEl.volume=0.35;
   _musicEl.addEventListener('ended',()=>{
-    // BUG FIX: modular rotation — safe with any track count, no infinite loop risk
     let step=MUSIC.length>1?1+rnd(0,MUSIC.length-2):0;
     _musicIdx=(_musicIdx+step)%MUSIC.length;
     _musicEl.src=MUSIC[_musicIdx];_musicEl.play().catch(()=>{});
@@ -430,6 +439,14 @@ function initAudio(){
   _musicIdx=rnd(0,MUSIC.length-1);
   _musicEl.src=MUSIC[_musicIdx];
   _musicEl.play().catch(()=>{});
+}
+
+function toggleMusic(){
+  if(!_audioOn){initAudio();return;}
+  _musicMuted=!_musicMuted;
+  if(_musicEl)_musicEl.volume=_musicMuted?0:0.35;
+  let btn=document.getElementById('musicBtn');
+  if(btn)btn.textContent=_musicMuted?'✕ MUSIC':'♪ MUSIC';
 }
 
 function sfx(key){
@@ -603,7 +620,8 @@ const HEROES=[
    desc:'Master of defense and counter-attacks. High HP, powerful shields.',
    flavor:'"Come back with your shield — or on it."',
    starterDeck:['strike','strike','strike','defend','defend','defend','quick_jab',
-     'armor_up','battle_cry','phalanx','spartan_kick','blood_sparta'],
+     'armor_up','battle_cry','phalanx','spartan_kick','blood_sparta',
+     'parry','iron_skin','wardens_oath'],
    uniquePool:['spartan_kick','phalanx','blood_sparta','warriors_300','shield_bash',
      'last_stand','spartan_wall','battle_cry']},
   {id:'percy',name:'Percy Jackson',title:'Son of Poseidon',icon:'🔱',color:'#1177cc',
@@ -611,7 +629,8 @@ const HEROES=[
    desc:'Water-powered demigod. Lower HP but incredible healing and sustain.',
    flavor:'"The sea doesn\'t care about your feelings. Neither do I."',
    starterDeck:['strike','strike','defend','defend','quick_jab','olive_branch',
-     'sea_surge','riptide','undertow','foresight','tidal_shield','ocean_breath'],
+     'sea_surge','riptide','undertow','foresight','tidal_shield','ocean_breath',
+     'golden_apple','parry','mystic_bolt'],
    uniquePool:['riptide','sea_surge','tsunami','undertow','tidal_shield',
      'son_poseidon','ocean_breath','heros_wit']},
   {id:'odysseus',name:'Odysseus',title:'King of Ithaca',icon:'🗺️',color:'#bb8800',
@@ -619,7 +638,8 @@ const HEROES=[
    desc:'Cunning strategist. Card manipulation and mana tricks. Slow start, devastating finish.',
    flavor:'"Brains beat brawn — every single time."',
    starterDeck:['strike','strike','defend','defend','quick_jab','cunning_plan',
-     'twin_strike','heros_wit','foresight','silver_tongue','trojan_horse','wanderers_lk'],
+     'twin_strike','heros_wit','foresight','silver_tongue','trojan_horse','wanderers_lk',
+     'combo_strike','power_surge','rage_draw'],
    uniquePool:['cunning_plan','silver_tongue','trojan_horse','twin_strike',
      'heros_wit','wanderers_lk','foresight','icarus_wings']},
 ];
@@ -767,6 +787,7 @@ let G={
   log:[],turnCount:0,
   cardRewards:[],rewardPhase:'pick',
   lbGodIdx:0,
+  lastScore:null,lastScoreGod:null,  // local cache — shows score instantly before Firebase confirms
 };
 
 /* ═══════════════ UTILS ═══════════════ */
@@ -818,8 +839,15 @@ async function recordWin(godId){
 }
 async function getBoard(godId){
   let d=await fbGet('/olympus_scores/'+godId+'/'+G.period);
-  if(!d)return[];
-  return Object.values(d).sort((a,b)=>a.turns-b.turns).slice(0,10);
+  let entries=d?Object.values(d):[];
+  // Merge local cache — guarantees the just-completed score appears immediately
+  // even if Firebase write hasn't propagated yet
+  if(G.lastScore&&G.lastScoreGod===godId&&G.lastScore.period===G.period){
+    if(!entries.some(e=>e.timestamp===G.lastScore.timestamp)){
+      entries.push(G.lastScore);
+    }
+  }
+  return entries.sort((a,b)=>a.turns-b.turns).slice(0,10);
 }
 
 /* ═══════════════ BATTLE LOGIC ═══════════════ */
@@ -941,6 +969,7 @@ function startPlayerTurn(){
     alog('Poison: -'+p+' HP!','#44ffcc');G.pPoison=Math.max(0,G.pPoison-1);}
   if(G.pWeak>0)G.pWeak--;
   if(G.pVuln>0)G.pVuln--;
+  G.discard.push(...G.hand);  // return unplayed cards — critical on wrong trivia answers
   G.hand=[];drawCards(5);sfx('cardDraw');G.turnCount++;
   G.triviaQ=TRIVIA[rnd(0,TRIVIA.length-1)];
   G.triviaAnswered=false;render();
@@ -1057,7 +1086,7 @@ function showResultCutscene(vids,title,titleColor,subtitle,cb){
 function proceedResult(){
   clearTimeout(_resultTimer);
   // Restore music volume
-  if(_musicEl)_musicEl.volume=0.35;
+  if(_musicEl)_musicEl.volume=_musicMuted?0:0.35;
   let el=document.getElementById('resultCS');
   if(el)el.remove();
   if(_resultCB){let cb=_resultCB;_resultCB=null;cb();}
@@ -1068,6 +1097,9 @@ function checkBattleEnd(){
     let god=GODS[G.currentGodIdx];
     alog('🏆 '+god.name.toUpperCase()+' DEFEATED!','#FFD700');sfx('victory');
     if(!G.defeatedGods.includes(god.id))G.defeatedGods.push(god.id);
+    // Cache score locally FIRST for instant leaderboard display, then write to Firebase
+    G.lastScore={name:G.playerName,period:G.period,turns:G.turnCount,hp:G.hp,timestamp:Date.now()};
+    G.lastScoreGod=god.id;
     recordWin(god.id);
     let pool=[god.reward,...god.extras,...getRewardPool()];
     pool=[...new Set(pool)].filter(id=>id&&CARDS[id]);
