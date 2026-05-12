@@ -1,0 +1,1390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Mt. Olympus Ascent</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --gold:#FFD700;--gold2:#cc8800;--dark:#070710;--dark2:#0c0c1e;--dark3:#10102a;
+  --red:#dd2200;--blue:#1155cc;--purple:#8822cc;--green:#11aa44;
+  --text:#dde0f5;--muted:#5566aa;
+}
+html,body{background:var(--dark);color:var(--text);font-family:'Press Start 2P',monospace;
+  min-height:100vh;overflow-x:hidden;}
+#game{max-width:820px;margin:0 auto;padding:8px;}
+
+/* ═══ BUTTONS ═══ */
+.btn{font-family:'Press Start 2P',monospace;font-size:8px;padding:10px 16px;
+  border:2px solid var(--gold);background:transparent;color:var(--gold);
+  cursor:pointer;transition:all .1s;letter-spacing:1px;}
+.btn:hover{background:var(--gold);color:#000;}
+.btn.primary{background:var(--gold);color:#000;}
+.btn.primary:hover{background:#fff;border-color:#fff;}
+.btn.red{border-color:#dd4444;color:#dd4444;}
+.btn.red:hover{background:#dd4444;color:#fff;}
+.btn.blue{border-color:#4488ff;color:#4488ff;}
+.btn.blue:hover{background:#4488ff;color:#fff;}
+.btn.green{border-color:#44ff88;color:#44ff88;}
+.btn.green:hover{background:#44ff88;color:#000;}
+.btn.sm{font-size:6px;padding:6px 10px;}
+
+/* ═══ HP BAR ═══ */
+.hpwrap{background:#0a0a0a;height:10px;border:1px solid #222;overflow:hidden;}
+.hpbar{height:100%;transition:width .4s;}
+.hpbar.hi{background:linear-gradient(90deg,#11aa44,#44ff88);}
+.hpbar.med{background:linear-gradient(90deg,#bb7700,#ffcc00);}
+.hpbar.low{background:linear-gradient(90deg,#aa1100,#ff3300);}
+
+/* ═══ MANA PIPS ═══ */
+.pip{display:inline-block;width:14px;height:14px;border-radius:50%;margin:2px;border:1px solid #333;}
+.pip.on{background:radial-gradient(circle,#66aaff,#1155cc);border-color:#4488ff;
+  box-shadow:0 0 6px #4488ff;}
+.pip.off{background:#0d0d1a;}
+
+/* ═══ CARD FRAMES — PNG-backed ═══
+   130×188px with content layers positioned inside frame panels */
+.card{
+  width:130px;height:188px;position:relative;cursor:pointer;border-radius:5px;
+  overflow:hidden;background-size:100% 100%;background-repeat:no-repeat;
+  flex-shrink:0;transition:transform .18s,box-shadow .18s,filter .18s;
+}
+.card:hover:not(.cdis){transform:translateY(-14px) scale(1.09);
+  box-shadow:0 22px 50px rgba(0,0,0,.9);}
+.cdis{opacity:.38;cursor:not-allowed;}
+.card.cglow{box-shadow:0 0 20px var(--gold),0 0 40px rgba(255,200,0,.4);}
+
+/* Frame by rarity */
+.r-common   {background-image:url('Wood1.png');}
+.r-uncommon {background-image:url('Bronze.png');}
+.r-rare     {background-image:url('Silver.png');}
+.r-legendary{background-image:url('Gold.png');animation:shimmer 2.8s ease-in-out infinite;}
+@keyframes shimmer{
+  0%,100%{filter:brightness(1) saturate(1) drop-shadow(0 0 3px #aa7700);}
+  50%    {filter:brightness(1.3) saturate(1.5) drop-shadow(0 0 16px #FFD700);}
+}
+
+/* Card name bar — sits at y:6, ABOVE art window */
+.c-hdr{
+  position:absolute;top:6px;left:10px;right:10px;height:17px;
+  background:rgba(0,0,0,.65);display:flex;justify-content:space-between;
+  align-items:center;padding:0 4px 0 5px;border-radius:2px;z-index:3;
+}
+.c-nm{font-size:4.8px;color:#fff;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;max-width:88px;line-height:1;}
+.c-mc{
+  width:16px;height:16px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:7px;font-weight:900;flex-shrink:0;
+  border:1px solid rgba(255,255,255,.5);
+}
+.mc-atk{background:#aa1100;color:#ffc8aa;}
+.mc-def{background:#114499;color:#aaccff;}
+.mc-spc{background:#660099;color:#ddaaff;}
+.mc-hea{background:#005522;color:#aaffcc;}
+.mc-free{background:#00aa44;color:#000;}
+
+/* Art window — inside top parchment panel y:24–102 */
+.c-art{
+  position:absolute;top:24px;left:10px;right:10px;height:78px;
+  border-radius:2px;overflow:hidden;display:flex;align-items:center;
+  justify-content:center;
+}
+.c-artbg{position:absolute;inset:0;opacity:.88;}
+.c-artbg.atk{background:radial-gradient(ellipse at 50% 60%,#ff6622,#bb1100 55%,#440000);}
+.c-artbg.def{background:radial-gradient(ellipse at 50% 60%,#44aaff,#1155bb 55%,#002255);}
+.c-artbg.spc{background:radial-gradient(ellipse at 50% 60%,#cc55ff,#7711cc 55%,#220044);}
+.c-artbg.hea{background:radial-gradient(ellipse at 50% 60%,#33ff88,#00aa44 55%,#002211);}
+.c-emoji{font-size:34px;position:relative;z-index:1;
+  filter:drop-shadow(0 3px 10px rgba(0,0,0,.75));}
+
+/* Type strip — over the middle band y:104–118 */
+.c-typ{
+  position:absolute;top:104px;left:10px;right:10px;height:14px;
+  background:rgba(0,0,0,.6);display:flex;align-items:center;
+  justify-content:center;font-size:4px;letter-spacing:2.5px;
+  text-transform:uppercase;border-radius:2px;
+}
+.typ-atk{color:#ff7755;}
+.typ-def{color:#66aaff;}
+.typ-spc{color:#cc77ff;}
+.typ-hea{color:#55ff99;}
+
+/* Text window — bottom parchment panel y:120–176 */
+.c-txt{
+  position:absolute;top:120px;left:12px;right:12px;bottom:12px;
+  display:flex;flex-direction:column;justify-content:space-between;
+}
+.c-dsc{font-size:4.5px;color:#2a1600;line-height:1.8;}
+.c-rar{font-size:4px;text-align:right;margin-top:2px;}
+.rar-common  {color:#6a4400;}
+.rar-uncommon{color:#7a5500;}
+.rar-rare    {color:#5566aa;}
+.rar-legendary{color:#997700;}
+
+/* ═══ BATTLE LAYOUT ═══ */
+/* Full-width god banner at top */
+.god-banner{
+  width:100%;height:200px;position:relative;overflow:hidden;
+  border:2px solid var(--gold);margin-bottom:8px;
+}
+.god-bg-vid{
+  position:absolute;inset:0;width:100%;height:100%;
+  object-fit:cover;opacity:.6;z-index:0;
+}
+.god-vignette{
+  position:absolute;inset:0;z-index:1;
+  background:linear-gradient(to bottom,rgba(0,0,0,.1) 0%,rgba(0,0,0,.7) 100%);
+}
+.god-stats{
+  position:absolute;bottom:0;left:0;right:0;padding:10px 12px;z-index:2;
+}
+.god-nameplate{
+  display:flex;justify-content:space-between;align-items:flex-end;
+  margin-bottom:5px;
+}
+.player-strip{
+  display:grid;grid-template-columns:1fr 1fr;gap:8px;
+  background:rgba(255,255,255,.03);border:1px solid #1a1a3a;
+  padding:8px;margin-bottom:8px;
+}
+.battle-log{
+  background:#04040d;border:1px solid #111128;height:68px;overflow-y:auto;
+  padding:5px 8px;font-size:5.5px;line-height:2.1;margin-bottom:8px;
+}
+.battle-log div{border-bottom:1px solid #0a0a14;}
+.hand-row{
+  display:flex;gap:7px;overflow-x:auto;padding:10px 4px 6px;
+  min-height:210px;align-items:flex-end;
+}
+.hand-row::-webkit-scrollbar{height:4px;}
+.hand-row::-webkit-scrollbar-thumb{background:var(--gold);}
+.intent-bar{
+  font-size:5.5px;padding:4px 10px;
+  background:rgba(180,40,40,.2);border:1px solid #663333;
+  color:#ee9999;display:inline-block;
+}
+
+/* ═══ TRIVIA ═══ */
+.trivia-box{
+  background:#06060f;border:3px solid var(--gold);
+  padding:12px;margin-bottom:8px;animation:slideIn .25s ease;
+}
+.t-lbl{font-size:5px;color:var(--muted);margin-bottom:7px;
+  text-transform:uppercase;letter-spacing:2px;}
+.t-q{font-size:6.5px;color:var(--gold);line-height:2;margin-bottom:10px;}
+.t-choices{display:flex;flex-direction:column;gap:5px;}
+.t-btn{
+  font-family:'Press Start 2P',monospace;font-size:5.5px;padding:8px 10px;
+  background:#080813;border:1px solid #222240;color:#bbb;
+  cursor:pointer;text-align:left;transition:all .1s;
+}
+.t-btn:hover{border-color:var(--gold);color:var(--gold);}
+.t-btn.correct{background:#082208;border-color:#44ff88;color:#44ff88;}
+.t-btn.wrong{background:#220808;border-color:#ff4444;color:#ff4444;}
+
+/* ═══ STATUS BADGES ═══ */
+.bdg{display:inline-block;font-size:4.5px;padding:2px 5px;
+  border-radius:2px;margin:1px;}
+.bdg-str {background:#5c1a00;color:#ffaa44;}
+.bdg-weak{background:#1a3300;color:#88ff44;}
+.bdg-vuln{background:#330022;color:#ff88ff;}
+.bdg-psn {background:#003322;color:#44ffcc;}
+.bdg-stun{background:#333300;color:#ffff44;}
+
+/* ═══ HERO SELECT ═══ */
+.hero-pick{
+  border:3px solid;padding:16px 14px;cursor:pointer;
+  transition:all .22s;background:var(--dark3);
+  width:195px;margin:8px;text-align:center;position:relative;
+  overflow:hidden;
+}
+.hero-pick:hover{transform:scale(1.06);}
+.hero-pick.sel{transform:scale(1.08);}
+.hero-pick-vid{
+  position:absolute;inset:0;width:100%;height:100%;
+  object-fit:cover;opacity:.22;z-index:0;pointer-events:none;
+}
+.hero-pick-body{position:relative;z-index:1;}
+
+/* ═══ MAP NODES ═══ */
+.gnode{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;
+  border:2px solid;margin-bottom:5px;cursor:pointer;
+  transition:all .18s;background:rgba(0,0,0,.3);
+}
+.gnode:hover:not(.glocked){transform:translateX(6px);filter:brightness(1.2);}
+.gnode.gavail{animation:pulse 2s infinite;}
+.gnode.glocked{border-color:#1a1a1a!important;opacity:.3;cursor:not-allowed;}
+.gnode.gbeat{opacity:.65;}
+
+/* ═══ CUTSCENE OVERLAY ═══ */
+.cutscene{
+  position:fixed;inset:0;background:#000;z-index:500;
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;
+}
+.cs-vid{
+  position:absolute;inset:0;width:100%;height:100%;
+  object-fit:cover;opacity:.7;
+}
+.cs-ui{
+  position:relative;z-index:1;text-align:center;
+  animation:fadeInUp 1s ease .5s both;
+}
+@keyframes fadeInUp{
+  from{opacity:0;transform:translateY(30px);}
+  to{opacity:1;transform:translateY(0);}
+}
+.cs-bg{
+  position:absolute;inset:0;
+  background:linear-gradient(to top,rgba(0,0,0,.9) 0%,transparent 60%);
+  z-index:0;
+}
+
+/* ═══ MISC ═══ */
+.divider{color:var(--gold);font-size:7px;text-align:center;
+  letter-spacing:5px;margin:10px 0;}
+.label{font-size:5.5px;color:var(--muted);text-transform:uppercase;
+  letter-spacing:1px;margin-bottom:3px;}
+.sh{font-size:10px;color:var(--gold);margin-bottom:18px;text-align:center;
+  text-shadow:0 0 12px var(--gold);}
+.period-btns{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;}
+input[type="text"]{font-family:'Press Start 2P',monospace;font-size:8px;
+  background:var(--dark2);border:2px solid var(--gold);color:var(--gold);
+  padding:10px;width:100%;max-width:300px;}
+input::placeholder{color:#3344aa;}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:var(--dark);}
+::-webkit-scrollbar-thumb{background:var(--gold);}
+
+/* ═══ ANIMATIONS ═══ */
+@keyframes slideIn{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 rgba(255,215,0,.2)}50%{box-shadow:0 0 14px rgba(255,215,0,.5)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes titleGlow{
+  0%,100%{text-shadow:0 0 20px var(--gold),0 0 40px var(--gold2);}
+  50%    {text-shadow:0 0 35px #fff,0 0 70px var(--gold);}
+}
+@keyframes floatUp{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-55px)}}
+.cursor{animation:blink 1s infinite;}
+.fdmg{position:fixed;font-family:'Press Start 2P',monospace;font-size:14px;
+  pointer-events:none;animation:floatUp 1s forwards;z-index:999;}
+</style>
+</head>
+<body>
+<div id="game"></div>
+<script>
+'use strict';
+const FIREBASE='https://minigolf-fd9ea-default-rtdb.firebaseio.com';
+
+/* ═══════════════ CARD LIBRARY ═══════════════ */
+const CARDS={
+  // STARTER
+  strike:       {id:'strike',       name:'Strike',          cost:1,type:'attack', rarity:'common',   art:'⚔️', desc:'Deal 6 damage.',                          et:'damage',       ev:6},
+  defend:       {id:'defend',       name:'Defend',          cost:1,type:'defense',rarity:'common',   art:'🛡️', desc:'Gain 5 block.',                           et:'block',        ev:5},
+  quick_jab:    {id:'quick_jab',    name:'Quick Jab',       cost:0,type:'attack', rarity:'common',   art:'👊', desc:'Deal 3 damage.',                          et:'damage',       ev:3},
+  armor_up:     {id:'armor_up',     name:'Armor Up',        cost:1,type:'defense',rarity:'common',   art:'🪖', desc:'Gain 8 block.',                           et:'block',        ev:8},
+  battle_cry:   {id:'battle_cry',   name:'Battle Cry',      cost:1,type:'special',rarity:'common',   art:'📣', desc:'Gain 2 Strength.',                        et:'strength',     ev:2},
+  olive_branch: {id:'olive_branch', name:'Olive Branch',    cost:1,type:'healing',rarity:'common',   art:'🌿', desc:'Heal 5 HP.',                              et:'heal',         ev:5},
+  foresight:    {id:'foresight',    name:'Foresight',       cost:1,type:'special',rarity:'common',   art:'📜', desc:'Draw 2 cards.',                           et:'draw',         ev:2},
+  heavy_blow:   {id:'heavy_blow',   name:'Heavy Blow',      cost:2,type:'attack', rarity:'common',   art:'🪓', desc:'Deal 12 damage.',                         et:'damage',       ev:12},
+  body_block:   {id:'body_block',   name:'Body Block',      cost:1,type:'defense',rarity:'common',   art:'🦺', desc:'Gain 6 block.',                           et:'block',        ev:6},
+  // LEONIDAS
+  spartan_kick: {id:'spartan_kick', name:'Spartan Kick',    cost:2,type:'attack', rarity:'uncommon', art:'🦵', desc:'Deal 10 dmg. Vulnerable.',                et:'damage_vuln',  ev:[10,2]},
+  phalanx:      {id:'phalanx',      name:'Phalanx',         cost:1,type:'defense',rarity:'uncommon', art:'🔰', desc:'7 block. Reflect 3 on hit.',              et:'block_thorns', ev:[7,3]},
+  blood_sparta: {id:'blood_sparta', name:'Blood of Sparta', cost:1,type:'special',rarity:'uncommon', art:'🩸', desc:'Gain 3 Strength.',                        et:'strength',     ev:3},
+  warriors_300: {id:'warriors_300', name:'300 Warriors',    cost:3,type:'attack', rarity:'rare',     art:'⚔️', desc:'Strike 3× for 7 each.',                  et:'multi_damage', ev:[7,3]},
+  shield_bash:  {id:'shield_bash',  name:'Shield Bash',     cost:2,type:'attack', rarity:'uncommon', art:'💢', desc:'Deal damage = your block.',               et:'shield_bash',  ev:0},
+  last_stand:   {id:'last_stand',   name:'Last Stand',      cost:0,type:'defense',rarity:'rare',     art:'🏳️', desc:'Below 30% HP: +20 block.',               et:'last_stand',   ev:20},
+  spartan_wall: {id:'spartan_wall', name:'Spartan Wall',    cost:2,type:'defense',rarity:'uncommon', art:'🧱', desc:'Gain 12 block.',                          et:'block',        ev:12},
+  // PERCY
+  riptide:      {id:'riptide',      name:'Riptide',         cost:2,type:'attack', rarity:'uncommon', art:'🌊', desc:'9 dmg. Heal 4 HP.',                       et:'damage_heal',  ev:[9,4]},
+  sea_surge:    {id:'sea_surge',    name:'Sea Surge',       cost:1,type:'healing',rarity:'uncommon', art:'💧', desc:'Heal 8 HP.',                              et:'heal',         ev:8},
+  tsunami:      {id:'tsunami',      name:'Tsunami',         cost:3,type:'attack', rarity:'rare',     art:'🌊', desc:'Deal 22 damage.',                         et:'damage',       ev:22},
+  undertow:     {id:'undertow',     name:'Undertow',        cost:2,type:'attack', rarity:'uncommon', art:'🌀', desc:'8 dmg. Apply Weak.',                      et:'damage_weak',  ev:[8,2]},
+  tidal_shield: {id:'tidal_shield', name:'Tidal Shield',    cost:2,type:'defense',rarity:'uncommon', art:'💙', desc:'12 block. Regain 1 mana.',                et:'block_mana',   ev:[12,1]},
+  son_poseidon: {id:'son_poseidon', name:'Son of Poseidon', cost:0,type:'special',rarity:'rare',     art:'🔱', desc:'Next card free + doubled!',              et:'double_next',  ev:0},
+  ocean_breath: {id:'ocean_breath', name:'Ocean Breath',    cost:1,type:'healing',rarity:'common',   art:'🐚', desc:'Heal 6 HP.',                              et:'heal',         ev:6},
+  // ODYSSEUS
+  cunning_plan: {id:'cunning_plan', name:'Cunning Plan',    cost:0,type:'special',rarity:'common',   art:'🗺️', desc:'Draw 3 cards.',                           et:'draw',         ev:3},
+  silver_tongue:{id:'silver_tongue',name:'Silver Tongue',   cost:1,type:'special',rarity:'uncommon', art:'🪙', desc:'Cards cost 1 less this turn.',            et:'cost_reduce',  ev:1},
+  trojan_horse: {id:'trojan_horse', name:'Trojan Horse',    cost:2,type:'special',rarity:'rare',     art:'🐴', desc:'Stun enemy 1 turn.',                      et:'damage_stun',  ev:[0,1]},
+  twin_strike:  {id:'twin_strike',  name:'Twin Strike',     cost:1,type:'attack', rarity:'common',   art:'🗡️', desc:'Strike twice for 5 each.',                et:'multi_damage', ev:[5,2]},
+  heros_wit:    {id:'heros_wit',    name:"Hero's Wit",      cost:1,type:'special',rarity:'uncommon', art:'💡', desc:'Gain 2 mana.',                            et:'mana_gain',    ev:2},
+  wanderers_lk: {id:'wanderers_lk', name:"Wanderer's Luck", cost:1,type:'special',rarity:'rare',     art:'🎲', desc:'Random powerful effect!',                 et:'random',       ev:0},
+  // GOD DROPS
+  lightning_bt: {id:'lightning_bt', name:'Lightning Bolt',  cost:3,type:'attack', rarity:'rare',     art:'⚡', desc:'25 dmg. Pierces block.',                  et:'damage_pierce',ev:25},
+  trident_slam: {id:'trident_slam', name:'Trident Slam',    cost:3,type:'attack', rarity:'rare',     art:'🔱', desc:'14 dmg. Apply 3 Poison.',                 et:'damage_poison',ev:[14,3]},
+  owls_wisdom:  {id:'owls_wisdom',  name:"Owl's Wisdom",    cost:2,type:'special',rarity:'rare',     art:'🦉', desc:'Draw 4 cards.',                           et:'draw',         ev:4},
+  hunters_mark: {id:'hunters_mark', name:"Hunter's Mark",   cost:2,type:'attack', rarity:'rare',     art:'🏹', desc:'10 dmg. Apply Vulnerable.',               et:'damage_vuln',  ev:[10,2]},
+  war_hymn:     {id:'war_hymn',     name:'War Hymn',        cost:2,type:'attack', rarity:'rare',     art:'🥁', desc:'12 dmg. Gain 2 Strength.',                et:'damage_strength',ev:[12,2]},
+  love_potion:  {id:'love_potion',  name:'Love Potion',     cost:1,type:'healing',rarity:'uncommon', art:'💖', desc:'Heal 12 HP.',                             et:'heal',         ev:12},
+  death_drain:  {id:'death_drain',  name:'Underworld Drain',cost:2,type:'attack', rarity:'rare',     art:'💀', desc:'10 dmg. Heal 5 HP.',                      et:'damage_heal',  ev:[10,5]},
+  sun_beam:     {id:'sun_beam',     name:'Sun Beam',        cost:2,type:'healing',rarity:'uncommon', art:'☀️', desc:'Heal 8 HP. Remove debuffs.',              et:'heal_cleanse', ev:8},
+  wine_frenzy:  {id:'wine_frenzy',  name:'Wine Frenzy',     cost:1,type:'attack', rarity:'uncommon', art:'🍷', desc:'Deal 5-20 random damage.',                et:'random_damage',ev:[5,20]},
+  // LEGENDARY
+  medusa_gaze:  {id:'medusa_gaze',  name:"Medusa's Gaze",   cost:2,type:'special',rarity:'rare',     art:'🐍', desc:'Stun enemy 2 turns.',                     et:'damage_stun',  ev:[0,2]},
+  hydra_slash:  {id:'hydra_slash',  name:'Hydra Slash',     cost:2,type:'attack', rarity:'uncommon', art:'🐉', desc:'Strike 3× for 6 each.',                   et:'multi_damage', ev:[6,3]},
+  golden_fleece:{id:'golden_fleece',name:'Golden Fleece',   cost:3,type:'healing',rarity:'legendary',art:'🐏', desc:'Heal 25 HP.',                             et:'heal',         ev:25},
+  icarus_wings: {id:'icarus_wings', name:'Icarus Wings',    cost:1,type:'special',rarity:'uncommon', art:'🪶', desc:'+3 mana next turn.',                      et:'mana_next',    ev:3},
+  prometheus:   {id:'prometheus',   name:'Prometheus Fire', cost:2,type:'attack', rarity:'rare',     art:'🔥', desc:'Apply 6 Poison.',                         et:'damage_poison',ev:[0,6]},
+  cyclops_eye:  {id:'cyclops_eye',  name:'Cyclops Eye',     cost:3,type:'attack', rarity:'legendary',art:'👁️', desc:'Deal 28 damage.',                         et:'damage',       ev:28},
+  minotaur:     {id:'minotaur',     name:'Minotaur Charge', cost:2,type:'attack', rarity:'uncommon', art:'🐂', desc:'Deal 15 damage.',                         et:'damage',       ev:15},
+  labyrinth:    {id:'labyrinth',    name:'Labyrinth',       cost:2,type:'special',rarity:'rare',     art:'🌀', desc:'3 dmg. Stun 1 turn.',                     et:'damage_stun',  ev:[3,1]},
+  aegis:        {id:'aegis',        name:'Aegis of Zeus',   cost:2,type:'defense',rarity:'legendary',art:'🛡️', desc:'15 block. +1 Strength.',                  et:'block_strength',ev:[15,1]},
+  hades_crown:  {id:'hades_crown',  name:"Hades' Crown",    cost:2,type:'special',rarity:'legendary',art:'👑', desc:'5 dmg. Heal 10 HP.',                      et:'damage_heal',  ev:[5,10]},
+};
+
+/* ═══════════════ HEROES ═══════════════ */
+const HEROES=[
+  {id:'leonidas',name:'King Leonidas',title:'Spartan Warrior',icon:'⚔️',color:'#cc1133',
+   maxHP:70,video:'Leonidas.mp4',
+   desc:'Master of defense and counter-attacks. High HP, powerful shields.',
+   flavor:'"Come back with your shield — or on it."',
+   starterDeck:['strike','strike','strike','defend','defend','defend','quick_jab',
+     'armor_up','battle_cry','phalanx','spartan_kick','blood_sparta'],
+   uniquePool:['spartan_kick','phalanx','blood_sparta','warriors_300','shield_bash',
+     'last_stand','spartan_wall','battle_cry']},
+  {id:'percy',name:'Percy Jackson',title:'Son of Poseidon',icon:'🔱',color:'#1177cc',
+   maxHP:55,video:'Percy.mp4',
+   desc:'Water-powered demigod. Lower HP but incredible healing and sustain.',
+   flavor:'"The sea doesn\'t care about your feelings. Neither do I."',
+   starterDeck:['strike','strike','defend','defend','quick_jab','olive_branch',
+     'sea_surge','riptide','undertow','foresight','tidal_shield','ocean_breath'],
+   uniquePool:['riptide','sea_surge','tsunami','undertow','tidal_shield',
+     'son_poseidon','ocean_breath','heros_wit']},
+  {id:'odysseus',name:'Odysseus',title:'King of Ithaca',icon:'🗺️',color:'#bb8800',
+   maxHP:50,video:'Odysseus.mp4',
+   desc:'Cunning strategist. Card manipulation and mana tricks. Slow start, devastating finish.',
+   flavor:'"Brains beat brawn — every single time."',
+   starterDeck:['strike','strike','defend','defend','quick_jab','cunning_plan',
+     'twin_strike','heros_wit','foresight','silver_tongue','trojan_horse','wanderers_lk'],
+   uniquePool:['cunning_plan','silver_tongue','trojan_horse','twin_strike',
+     'heros_wit','wanderers_lk','foresight','icarus_wings']},
+];
+
+/* ═══════════════ GODS ═══════════════ */
+const GODS=[
+  {id:'dionysus',name:'Dionysus', title:'God of Wine & Revelry',  icon:'🍷',
+   video:'dionysus.mp4', color:'#9b1060',maxHP:32,atk:[5,7,8],
+   blockAmt:4,strongAtk:11,pattern:['attack','attack','block','attack','strong_attack'],
+   flavor:'"Another round? Oh you meant battle — same thing!"',
+   reward:'wine_frenzy',extras:['love_potion','olive_branch','battle_cry']},
+  {id:'artemis', name:'Artemis',  title:'Goddess of the Hunt',     icon:'🏹',
+   video:'Artemis.mp4',  color:'#2d7a4a',maxHP:42,atk:[7,9,10],
+   blockAmt:5,strongAtk:14,pattern:['attack','attack','debuff','attack','strong_attack','block'],
+   flavor:'"You cannot outrun my arrows."',
+   reward:'hunters_mark',extras:['quick_jab','armor_up','body_block']},
+  {id:'apollo',  name:'Apollo',   title:'God of the Sun & Music',  icon:'☀️',
+   video:'Apollo.mp4',   color:'#cc8800',maxHP:50,atk:[8,10,11],
+   blockAmt:6,strongAtk:15,healAmt:8,
+   pattern:['attack','block','attack','strong_attack','heal','attack'],
+   flavor:'"The oracle foretold your defeat."',
+   reward:'sun_beam',extras:['foresight','battle_cry','olive_branch']},
+  {id:'aphrodite',name:'Aphrodite',title:'Goddess of Love',        icon:'💖',
+   video:'Aphrodite.mp4',color:'#cc3388',maxHP:56,atk:[7,9,11],
+   blockAmt:5,strongAtk:14,charmDmg:4,
+   pattern:['charm','attack','charm','attack','strong_attack'],
+   flavor:'"Beauty is a weapon, darling."',
+   reward:'love_potion',extras:['olive_branch','sea_surge','sun_beam']},
+  {id:'ares',    name:'Ares',     title:'God of War',              icon:'⚔️',
+   video:'Ares.mp4',     color:'#aa0000',maxHP:66,atk:[11,13,14],
+   blockAmt:4,strongAtk:18,berserkDmg:21,
+   pattern:['strong_attack','attack','strong_attack','attack','berserk'],
+   flavor:'"War is the only true art!"',
+   reward:'war_hymn',extras:['heavy_blow','blood_sparta','minotaur']},
+  {id:'poseidon',name:'Poseidon', title:'God of the Sea',          icon:'🌊',
+   video:'Poseidon.mp4', color:'#005599',maxHP:76,atk:[11,13,16],
+   blockAmt:8,strongAtk:19,tidalDmg:17,
+   pattern:['attack','attack','strong_attack','block','tidal_wave','attack'],
+   flavor:'"The sea answers to no one."',
+   reward:'trident_slam',extras:['tidal_shield','riptide','undertow']},
+  {id:'athena',  name:'Athena',   title:'Goddess of Wisdom',       icon:'🦉',
+   video:'Athena.mp4',   color:'#4444aa',maxHP:82,atk:[9,12,14],
+   blockAmt:15,strongAtk:17,counterDmg:9,
+   pattern:['block','attack','block','strong_attack','counter','block','attack'],
+   flavor:'"Every battle is won before it is fought."',
+   reward:'owls_wisdom',extras:['aegis','labyrinth','foresight']},
+  {id:'hades',   name:'Hades',    title:'God of the Underworld',   icon:'💀',
+   video:'hades.mp4',    color:'#2a2a5a',maxHP:92,atk:[12,15,17],
+   blockAmt:10,strongAtk:21,drainAmt:9,
+   pattern:['attack','drain','strong_attack','summon','attack','drain'],
+   flavor:'"Welcome to eternity."',
+   reward:'death_drain',extras:['prometheus','medusa_gaze','hades_crown']},
+  {id:'zeus',    name:'Zeus',     title:'King of the Gods',        icon:'⚡',
+   video:'Zeus.mp4',     color:'#FFD700',maxHP:115,atk:[14,17,20],
+   blockAmt:12,strongAtk:24,lightDmg:22,stormDmg:30,
+   pattern:['lightning','attack','lightning','strong_attack','storm','attack','lightning'],
+   flavor:'"Kneel before the King of Olympus!"',
+   reward:'lightning_bt',extras:['cyclops_eye','aegis','golden_fleece']},
+];
+
+/* ═══════════════ TRIVIA ═══════════════ */
+const TRIVIA=[
+  {q:'What form of government was invented in ancient Athens?',
+   c:['Democracy','Monarchy','Theocracy','Oligarchy'],a:0},
+  {q:'Who was the king of the Greek gods on Mt. Olympus?',
+   c:['Ares','Poseidon','Zeus','Apollo'],a:2},
+  {q:'Which battle did 300 Spartans fight to defend Greece?',
+   c:['Battle of Marathon','Battle of Thermopylae','Battle of Troy','Battle of Salamis'],a:1},
+  {q:'What does the G in GRAPES stand for?',
+   c:['Gods','Geography','Government','Gold'],a:1},
+  {q:'Which Greek city-state was famous for its warrior culture?',
+   c:['Athens','Corinth','Sparta','Thebes'],a:2},
+  {q:'What body of water surrounds most of Greece?',
+   c:['Black Sea','Red Sea','Mediterranean Sea','Caspian Sea'],a:2},
+  {q:'Who wrote the epic poems the Iliad and the Odyssey?',
+   c:['Plato','Aristotle','Homer','Socrates'],a:2},
+  {q:'What city was at the center of the Trojan War?',
+   c:['Athens','Sparta','Troy','Corinth'],a:2},
+  {q:'Which Greek goddess was associated with wisdom?',
+   c:['Aphrodite','Hera','Artemis','Athena'],a:3},
+  {q:'What does the R in GRAPES stand for?',
+   c:['Roads','Religion','Republic','Royalty'],a:1},
+  {q:'Which Greek philosopher taught Alexander the Great?',
+   c:['Socrates','Plato','Aristotle','Homer'],a:2},
+  {q:'What is an agora in ancient Greece?',
+   c:['A warship','A public marketplace','A temple','A military unit'],a:1},
+  {q:'The first Olympic Games honored which god?',
+   c:['Ares','Apollo','Poseidon','Zeus'],a:3},
+  {q:'What famous structure sat on the Acropolis in Athens?',
+   c:['The Parthenon','The Colosseum','The Pantheon','The Forum'],a:0},
+  {q:'Which Greek hero completed 12 labors?',
+   c:['Achilles','Perseus','Odysseus','Heracles (Hercules)'],a:3},
+  {q:'What does democracy mean?',
+   c:['Rule by the rich','Rule by the military','Rule by the people','Rule by priests'],a:2},
+  {q:'What does the A in GRAPES stand for?',
+   c:['Armies','Achievements','Agora','Agriculture'],a:1},
+  {q:'Which sea battle ended the Persian threat to Greece?',
+   c:['Battle of Troy','Battle of Salamis','Battle of Corinth','Battle of Argos'],a:1},
+  {q:'What was a polis in ancient Greece?',
+   c:['A weapon','A city-state','A government official','A ceremony'],a:1},
+  {q:'Who was the hero of Homer\'s Odyssey?',
+   c:['Achilles','Heracles','Odysseus','Perseus'],a:2},
+  {q:'Which Greek god ruled the seas?',
+   c:['Hades','Zeus','Ares','Poseidon'],a:3},
+  {q:'What does the P in GRAPES stand for?',
+   c:['People','Politics','Philosophy','Polytheism'],a:1},
+  {q:'Where did the Greek gods supposedly live?',
+   c:['Mount Olympus','Mount Parnassus','Mount Sinai','The Acropolis'],a:0},
+  {q:'What is an oligarchy?',
+   c:['Rule by the people','Rule by one person','Rule by a small group','Rule by the army'],a:2},
+  {q:'The Trojan Horse was used in which war?',
+   c:['Persian Wars','Spartan War','Trojan War','Peloponnesian War'],a:2},
+  {q:'What does the E in GRAPES stand for?',
+   c:['Empire','Economics','Education','Engineering'],a:1},
+  {q:'What does the S in GRAPES stand for?',
+   c:['Sparta','Science','Society','Social Structure'],a:3},
+  {q:'Which famous thinker said "Know thyself"?',
+   c:['Aristotle','Plato','Socrates','Homer'],a:2},
+  {q:'Which god was the god of war?',
+   c:['Zeus','Apollo','Ares','Hermes'],a:2},
+  {q:'What is a trireme?',
+   c:['A Greek weapon','An ancient warship','A musical instrument','A type of government'],a:1},
+  {q:'Which hero killed Medusa?',
+   c:['Achilles','Odysseus','Theseus','Perseus'],a:3},
+  {q:'Spartan boys began military training at age:',
+   c:['5','7','10','15'],a:1},
+  {q:'What is the Greek underworld called?',
+   c:['Elysium','Tartarus','Hades','The Styx'],a:2},
+  {q:'Which god was the messenger of the gods?',
+   c:['Apollo','Ares','Hermes','Dionysus'],a:2},
+  {q:'What does polytheism mean?',
+   c:['One god','Many gods','No gods','Nature spirits'],a:1},
+];
+
+/* ═══════════════ STATE ═══════════════ */
+let G={
+  screen:'title',hero:null,playerName:'',period:'',
+  hp:0,maxHP:0,block:0,strength:0,mana:3,maxMana:3,bonusMana:0,blockThorns:0,
+  pWeak:0,pVuln:0,pPoison:0,
+  deck:[],hand:[],discard:[],
+  godHP:0,godMaxHP:0,godBlock:0,gWeak:0,gVuln:0,gStun:0,gPoison:0,godPatternIdx:0,
+  currentGodIdx:0,defeatedGods:[],
+  phase:'trivia',triviaQ:null,triviaAnswered:false,
+  doubleNext:false,costReduce:0,
+  log:[],turnCount:0,
+  cardRewards:[],rewardPhase:'pick',
+  lbGodIdx:0,
+};
+
+/* ═══════════════ UTILS ═══════════════ */
+function rnd(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+function shuffle(a){let b=[...a];for(let i=b.length-1;i>0;i--){let j=rnd(0,i);[b[i],b[j]]=[b[j],b[i]];}return b;}
+function pickN(a,n){return shuffle(a).slice(0,n);}
+function clamp(v,lo,hi){return Math.max(lo,Math.min(hi,v));}
+function hpc(p){return p<30?'low':p<60?'med':'hi';}
+function alog(msg,c='#aabbcc'){G.log.unshift({msg,c});if(G.log.length>25)G.log.pop();}
+function fdmg(msg,c='#ff4444'){
+  let e=document.createElement('div');e.className='fdmg';
+  e.textContent=msg;e.style.color=c;
+  e.style.left=rnd(220,480)+'px';e.style.top=rnd(120,200)+'px';
+  document.body.appendChild(e);setTimeout(()=>e.remove(),950);
+}
+
+/* ═══════════════ FIREBASE ═══════════════ */
+async function fbGet(p){try{let r=await fetch(FIREBASE+p+'.json');return await r.json();}catch{return null;}}
+async function fbSet(p,d){try{await fetch(FIREBASE+p+'.json',{method:'PUT',body:JSON.stringify(d)});}catch{}}
+async function fbPush(p,d){try{let r=await fetch(FIREBASE+p+'.json',{method:'POST',body:JSON.stringify(d)});return await r.json();}catch{return null;}}
+
+async function saveDeck(){
+  if(!G.playerName||!G.hero)return;
+  let k=G.playerName.replace(/\s+/g,'_').toLowerCase();
+  await fbSet('/olympus_decks/'+k,{hero:G.hero.id,deck:G.deck,defeatedGods:G.defeatedGods,
+    period:G.period,hp:G.hp,maxHP:G.maxHP,maxMana:G.maxMana,savedAt:Date.now()});
+}
+async function loadSave(){
+  if(!G.playerName)return false;
+  let k=G.playerName.replace(/\s+/g,'_').toLowerCase();
+  let d=await fbGet('/olympus_decks/'+k);
+  if(d&&d.hero){
+    G.hero=HEROES.find(h=>h.id===d.hero);
+    if(!G.hero)return false;
+    G.deck=d.deck||[...G.hero.starterDeck];
+    G.defeatedGods=d.defeatedGods||[];
+    G.period=d.period||G.period;
+    G.hp=d.hp||G.hero.maxHP;
+    G.maxHP=d.maxHP||G.hero.maxHP;
+    G.maxMana=d.maxMana||3;
+    return true;
+  }
+  return false;
+}
+async function recordWin(godId){
+  if(!G.playerName||!G.period)return;
+  await fbPush('/olympus_scores/'+godId+'/'+G.period,
+    {name:G.playerName,period:G.period,turns:G.turnCount,hp:G.hp,timestamp:Date.now()});
+}
+async function getBoard(godId){
+  let d=await fbGet('/olympus_scores/'+godId+'/'+G.period);
+  if(!d)return[];
+  return Object.values(d).sort((a,b)=>a.turns-b.turns).slice(0,10);
+}
+
+/* ═══════════════ BATTLE LOGIC ═══════════════ */
+function dealDmg(amt,pierce=false){
+  let god=GODS[G.currentGodIdx];
+  let d=amt+G.strength;
+  if(G.gVuln>0)d=Math.floor(d*1.5);
+  if(G.pWeak>0)d=Math.floor(d*0.75);
+  if(!pierce){
+    let b=Math.min(G.godBlock,d);G.godBlock=Math.max(0,G.godBlock-d);
+    d=Math.max(0,d-b);if(b>0)alog('Blocked '+b+' dmg!','#4488ff');
+  }else alog('Pierce! Ignores block!','#FFD700');
+  G.godHP=Math.max(0,G.godHP-d);
+  if(d>0){alog('You deal '+d+' to '+god.name+'!','#ffaa44');fdmg('-'+d,'#ffaa44');}
+}
+function gainBlk(n){G.block+=n;alog('You gain '+n+' block.','#4488ff');}
+function healHP(n){G.hp=clamp(G.hp+n,0,G.maxHP);alog('You heal '+n+' HP.','#44ff88');}
+function gWk(n){G.gWeak=Math.max(G.gWeak,n);alog(GODS[G.currentGodIdx].name+' is Weakened!','#aaff44');}
+function gVl(n){G.gVuln=Math.max(G.gVuln,n);alog(GODS[G.currentGodIdx].name+' is Vulnerable!','#ff88ff');}
+function gPs(n){G.gPoison+=n;alog(GODS[G.currentGodIdx].name+' poisoned +'+n+'!','#44ffcc');}
+function gSt(n){G.gStun=Math.max(G.gStun,n);alog(GODS[G.currentGodIdx].name+' is Stunned!','#ffff44');}
+
+function playCard(id,i){
+  if(G.phase!=='play')return;
+  let c=CARDS[id];if(!c)return;
+  let cost=Math.max(0,c.cost-G.costReduce);
+  if(G.doubleNext)cost=0;
+  if(G.mana<cost){alog('Not enough mana!','#ff4444');return;}
+  G.mana-=cost;G.hand.splice(i,1);G.discard.push(id);
+  let m=G.doubleNext?2:1;G.doubleNext=false;
+  alog('Playing '+c.name+'!','#FFD700');
+  switch(c.et){
+    case 'damage':          dealDmg(c.ev*m);break;
+    case 'damage_pierce':   dealDmg(c.ev*m,true);break;
+    case 'block':           gainBlk(c.ev*m);break;
+    case 'heal':            healHP(c.ev*m);break;
+    case 'draw':            drawCards(c.ev);break;
+    case 'mana_gain':       G.mana=clamp(G.mana+c.ev,0,10);alog('+'+c.ev+' mana!','#4488ff');break;
+    case 'strength':        G.strength+=c.ev;alog('+'+c.ev+' Strength!','#ff8800');break;
+    case 'damage_weak':     dealDmg(c.ev[0]*m);gWk(c.ev[1]);break;
+    case 'damage_vuln':     dealDmg(c.ev[0]*m);gVl(c.ev[1]);break;
+    case 'damage_poison':   dealDmg(c.ev[0]*m);gPs(c.ev[1]);break;
+    case 'damage_stun':     dealDmg(c.ev[0]*m);gSt(c.ev[1]);break;
+    case 'damage_heal':     dealDmg(c.ev[0]*m);healHP(c.ev[1]);break;
+    case 'damage_strength': dealDmg(c.ev[0]*m);G.strength+=c.ev[1];alog('+'+c.ev[1]+' Strength!','#ff8800');break;
+    case 'multi_damage':    for(let x=0;x<c.ev[1];x++)dealDmg(c.ev[0]*m);break;
+    case 'block_thorns':    gainBlk(c.ev[0]*m);G.blockThorns+=c.ev[1];alog('Thorns: '+c.ev[1]+' reflect!','#ff8800');break;
+    case 'block_mana':      gainBlk(c.ev[0]*m);G.mana=clamp(G.mana+c.ev[1],0,10);alog('+'+c.ev[1]+' mana!','#4488ff');break;
+    case 'block_strength':  gainBlk(c.ev[0]*m);G.strength+=c.ev[1];alog('+'+c.ev[1]+' Strength!','#ff8800');break;
+    case 'shield_bash':     dealDmg(G.block*m);break;
+    case 'last_stand':      if(G.hp/G.maxHP<0.3)gainBlk(c.ev);else alog('HP not low enough!','#ff4444');break;
+    case 'double_next':     G.doubleNext=true;alog('Next card: FREE + DOUBLED!','#FFD700');break;
+    case 'cost_reduce':     G.costReduce=c.ev;alog('Cards cost '+c.ev+' less this turn!','#FFD700');break;
+    case 'random':          randEffect();break;
+    case 'random_damage':   dealDmg(rnd(c.ev[0],c.ev[1])*m);break;
+    case 'heal_cleanse':    healHP(c.ev);G.pWeak=0;G.pVuln=0;alog('Debuffs removed!','#44ff88');break;
+    case 'mana_next':       G.bonusMana+=c.ev;alog('+'+c.ev+' mana next turn!','#4488ff');break;
+  }
+  render();checkBattleEnd();
+}
+
+function randEffect(){
+  let fx=[
+    ()=>{dealDmg(15);alog('RANDOM: 15 damage!','#FFD700');},
+    ()=>{healHP(15);alog('RANDOM: Heal 15!','#FFD700');},
+    ()=>{gainBlk(12);alog('RANDOM: 12 block!','#FFD700');},
+    ()=>{gVl(2);gWk(2);alog('RANDOM: Vuln + Weak!','#FFD700');},
+    ()=>{G.strength+=4;alog('RANDOM: +4 Strength!','#FFD700');},
+    ()=>{drawCards(3);alog('RANDOM: Draw 3!','#FFD700');},
+    ()=>{G.gPoison+=5;alog('RANDOM: 5 Poison!','#FFD700');},
+    ()=>{gSt(1);alog('RANDOM: Stun!','#FFD700');},
+  ];
+  fx[rnd(0,fx.length-1)]();
+}
+
+function drawCards(n){
+  for(let i=0;i<n;i++){
+    if(G.deck.length===0){
+      G.deck=shuffle(G.discard);G.discard=[];
+      if(G.deck.length===0)break;
+      alog('Deck reshuffled.','#444466');
+    }
+    G.hand.push(G.deck.shift());
+  }
+}
+
+function startPlayerTurn(){
+  G.block=0;G.blockThorns=0;G.costReduce=0;
+  G.mana=clamp(G.maxMana+G.bonusMana,0,10);G.bonusMana=0;
+  G.phase='trivia';
+  if(G.pPoison>0){let p=G.pPoison;G.hp=Math.max(0,G.hp-p);
+    alog('Poison: -'+p+' HP!','#44ffcc');G.pPoison=Math.max(0,G.pPoison-1);}
+  if(G.pWeak>0)G.pWeak--;
+  if(G.pVuln>0)G.pVuln--;
+  G.hand=[];drawCards(5);G.turnCount++;
+  G.triviaQ=TRIVIA[rnd(0,TRIVIA.length-1)];
+  G.triviaAnswered=false;render();
+}
+
+function endPlayerTurn(){
+  G.phase='enemy';G.discard.push(...G.hand);G.hand=[];
+  render();setTimeout(enemyTurn,900);
+}
+
+function enemyTurn(){
+  let god=GODS[G.currentGodIdx];
+  if(G.gPoison>0){let p=G.gPoison;G.godHP=Math.max(0,G.godHP-p);
+    alog(god.name+' poison: -'+p,'#44ffcc');G.gPoison=Math.max(0,G.gPoison-1);
+    if(G.godHP<=0){checkBattleEnd();return;}}
+  if(G.gWeak>0)G.gWeak--;
+  if(G.gVuln>0)G.gVuln--;
+  if(G.gStun>0){G.gStun--;alog(god.name+' stunned! Skips turn.','#ffff44');
+    setTimeout(startPlayerTurn,500);return;}
+  G.godBlock=0;
+  let action=god.pattern[G.godPatternIdx%god.pattern.length];G.godPatternIdx++;
+  let atk=rnd(god.atk[0],god.atk[god.atk.length-1]);
+  switch(action){
+    case 'attack':        gAtk(atk,god);break;
+    case 'strong_attack': gAtk(god.strongAtk||atk+5,god);break;
+    case 'block':         G.godBlock=god.blockAmt||8;alog(god.name+' gains '+(god.blockAmt||8)+' block!','#4488ff');break;
+    case 'debuff':        G.pWeak=Math.max(G.pWeak,2);alog(god.name+' weakens you!','#aaff44');break;
+    case 'charm':         gAtk(god.charmDmg||5,god);G.bonusMana-=1;alog(god.name+' charms you! -1 mana next turn.','#ff88ff');break;
+    case 'berserk':       gAtk(god.berserkDmg||20,god);break;
+    case 'tidal_wave':    gAtk(god.tidalDmg||17,god);G.pVuln=Math.max(G.pVuln,2);alog('Tidal wave! Vulnerable!','#ff88ff');break;
+    case 'counter':       gAtk(god.counterDmg||9,god);break;
+    case 'heal':          let hh=god.healAmt||10;G.godHP=clamp(G.godHP+hh,0,G.godMaxHP);alog(god.name+' heals '+hh+'!','#44ff88');break;
+    case 'drain':         gAtk(god.drainAmt||9,god);G.godHP=clamp(G.godHP+Math.floor((god.drainAmt||9)/2),0,G.godMaxHP);alog(god.name+' drains life!','#aa44ff');break;
+    case 'summon':        gAtk(atk,god);G.godHP=clamp(G.godHP+10,0,G.godMaxHP);alog(god.name+' summons help!','#ff8800');break;
+    case 'lightning':     gAtk(god.lightDmg||22,god);alog('⚡ LIGHTNING!','#FFD700');break;
+    case 'storm':         gAtk(god.stormDmg||30,god);alog('⛈️ THE STORM OF ZEUS!','#FFD700');break;
+  }
+  setTimeout(()=>{if(G.hp<=0)checkBattleEnd();else startPlayerTurn();},700);
+}
+
+function gAtk(dmg,god){
+  let d=dmg;
+  if(G.gWeak>0)d=Math.floor(d*0.75);
+  if(G.pVuln>0)d=Math.floor(d*1.5);
+  let b=Math.min(G.block,d);G.block=Math.max(0,G.block-d);let hit=Math.max(0,d-b);
+  if(b>0&&G.blockThorns>0){G.godHP=Math.max(0,G.godHP-G.blockThorns);
+    alog('Thorns: '+G.blockThorns+' reflected!','#ff8800');}
+  G.hp=Math.max(0,G.hp-hit);
+  if(b>0)alog('Block absorbs '+b+'!','#4488ff');
+  alog(god.name+' hits for '+hit+'!','#ff4444');fdmg('-'+hit,'#ff4444');render();
+}
+
+function getIntent(){
+  let god=GODS[G.currentGodIdx];
+  let a=god.pattern[G.godPatternIdx%god.pattern.length];
+  switch(a){
+    case 'attack':        return '⚔️ Attack: ~'+god.atk[1];
+    case 'strong_attack': return '💥 Strong Atk: '+(god.strongAtk||god.atk[2]+3);
+    case 'block':         return '🛡️ Blocking: +'+(god.blockAmt||8);
+    case 'debuff':        return '💚 Weaken you';
+    case 'charm':         return '💖 Charm + Atk';
+    case 'berserk':       return '😡 BERSERK: '+(god.berserkDmg||20);
+    case 'tidal_wave':    return '🌊 Tidal Wave: '+(god.tidalDmg||17);
+    case 'counter':       return '🔄 Counter: '+(god.counterDmg||9);
+    case 'heal':          return '💚 Healing: +'+(god.healAmt||10);
+    case 'drain':         return '🩸 Life Drain: '+(god.drainAmt||9);
+    case 'summon':        return '📯 Summoning';
+    case 'lightning':     return '⚡ Lightning: '+(god.lightDmg||22);
+    case 'storm':         return '⛈️ STORM: '+(god.stormDmg||30);
+    default:              return '❓ ???';
+  }
+}
+
+function checkBattleEnd(){
+  if(G.godHP<=0){
+    let god=GODS[G.currentGodIdx];
+    alog('🏆 '+god.name.toUpperCase()+' DEFEATED!','#FFD700');
+    if(!G.defeatedGods.includes(god.id))G.defeatedGods.push(god.id);
+    recordWin(god.id);
+    let pool=[god.reward,...god.extras,...getRewardPool()];
+    pool=[...new Set(pool)].filter(id=>id&&CARDS[id]);
+    G.cardRewards=pickN(pool,3);G.rewardPhase='pick';
+    saveDeck();
+    G.screen=G.currentGodIdx===GODS.length-1?'victory':'card_reward';
+    render();return;
+  }
+  if(G.hp<=0){G.screen='game_over';render();}
+}
+
+function getRewardPool(){
+  return pickN(Object.keys(CARDS).filter(id=>CARDS[id].rarity!=='common'||Math.random()<0.3),8);
+}
+
+function startBattle(idx){
+  let god=GODS[idx];
+  G.currentGodIdx=idx;
+  G.hp=G.hp>0?G.hp:G.maxHP;G.maxHP=G.hero.maxHP;
+  G.block=0;G.strength=0;G.mana=G.maxMana;G.bonusMana=0;
+  G.blockThorns=0;G.costReduce=0;G.doubleNext=false;
+  G.pWeak=0;G.pVuln=0;G.pPoison=0;
+  G.godHP=god.maxHP;G.godMaxHP=god.maxHP;G.godBlock=0;
+  G.gWeak=0;G.gVuln=0;G.gStun=0;G.gPoison=0;G.godPatternIdx=0;
+  G.turnCount=0;G.log=[];
+  G.deck=shuffle([...G.deck]);G.hand=[];G.discard=[];
+  G.screen='battle';drawCards(5);
+  G.triviaQ=TRIVIA[rnd(0,TRIVIA.length-1)];
+  G.triviaAnswered=false;G.phase='trivia';render();
+}
+
+/* ═══════════════ CARD RENDER HELPERS ═══════════════ */
+function artClass(t){return{attack:'atk',defense:'def',special:'spc',healing:'hea'}[t]||'atk';}
+function mcClass(t,cost){
+  if(cost===0)return'mc-free';
+  return{attack:'mc-atk',defense:'mc-def',special:'mc-spc',healing:'mc-hea'}[t]||'mc-atk';
+}
+function typClass(t){return{attack:'typ-atk',defense:'typ-def',special:'typ-spc',healing:'typ-hea'}[t]||'typ-atk';}
+function rarClass(r){return'rar-'+r;}
+function rarLabel(r){return{common:'◆ COMMON',uncommon:'◆ UNCOMMON',rare:'◇ RARE',legendary:'★ LEGENDARY'}[r]||r;}
+
+function mkCard(id, onclick, extra=''){
+  let c=CARDS[id];if(!c)return'';
+  return`<div class="card r-${c.rarity}${extra}" onclick="${onclick}">
+    <div class="c-hdr">
+      <span class="c-nm">${c.name}</span>
+      <span class="c-mc ${mcClass(c.type,c.cost)}">${c.cost}</span>
+    </div>
+    <div class="c-art">
+      <div class="c-artbg ${artClass(c.type)}"></div>
+      <span class="c-emoji">${c.art}</span>
+    </div>
+    <div class="c-typ ${typClass(c.type)}">${c.type.toUpperCase()}</div>
+    <div class="c-txt">
+      <div class="c-dsc">${c.desc}</div>
+      <div class="c-rar ${rarClass(c.rarity)}">${rarLabel(c.rarity)}</div>
+    </div>
+  </div>`;
+}
+
+function mkHandCard(id, i){
+  let c=CARDS[id];if(!c)return'';
+  let cost=Math.max(0,c.cost-G.costReduce);
+  if(G.doubleNext)cost=0;
+  let canPlay=G.mana>=cost;
+  let glow=G.doubleNext&&canPlay?' cglow':'';
+  let dis=canPlay?'':'cdis';
+  // Override displayed cost in header
+  return`<div class="card r-${c.rarity} ${dis}${glow}" onclick="${canPlay?`playCard('${id}',${i})`:''}">
+    <div class="c-hdr">
+      <span class="c-nm">${c.name}</span>
+      <span class="c-mc ${mcClass(c.type,cost)}" style="${cost===0?'background:#00aa44;color:#000;':''}">${cost}</span>
+    </div>
+    <div class="c-art">
+      <div class="c-artbg ${artClass(c.type)}"></div>
+      <span class="c-emoji">${c.art}</span>
+    </div>
+    <div class="c-typ ${typClass(c.type)}">${c.type.toUpperCase()}</div>
+    <div class="c-txt">
+      <div class="c-dsc">${c.desc}</div>
+      <div class="c-rar ${rarClass(c.rarity)}">${rarLabel(c.rarity)}</div>
+    </div>
+  </div>`;
+}
+
+/* ═══════════════ RENDER ENGINE ═══════════════ */
+const R=document.getElementById('game');
+function render(){
+  window.scrollTo(0,0);
+  switch(G.screen){
+    case 'title':       renderTitle();break;
+    case 'name_entry':  renderNameEntry();break;
+    case 'hero_select': renderHeroSelect();break;
+    case 'map':         renderMap();break;
+    case 'battle':      renderBattle();break;
+    case 'card_reward': renderCardReward();break;
+    case 'game_over':   renderGameOver();break;
+    case 'victory':     renderVictory();break;
+    case 'deck_view':   renderDeckView();break;
+    case 'leaderboard': renderLeaderboard();break;
+  }
+}
+
+/* ─── TITLE ─── */
+function renderTitle(){
+  R.innerHTML=`
+  <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;text-align:center;padding:20px;
+    background:radial-gradient(ellipse at 50% 30%,#1a1030 0%,#070710 70%);">
+    <div style="font-size:52px;margin-bottom:10px;filter:drop-shadow(0 0 20px #FFD700);">⚡🏔️⚡</div>
+    <div style="font-size:14px;color:var(--gold);animation:titleGlow 2s infinite;margin-bottom:4px;
+      letter-spacing:4px;">MT. OLYMPUS</div>
+    <div style="font-size:14px;color:var(--gold);animation:titleGlow 2s infinite;margin-bottom:14px;
+      letter-spacing:4px;">ASCENT</div>
+    <div style="font-size:6px;color:#5566aa;letter-spacing:4px;margin-bottom:8px;">
+      A GREEK MYTHOLOGY CARD GAME</div>
+    <div class="divider" style="letter-spacing:8px;">★ ★ ★ ★ ★</div>
+    <div style="font-size:5.5px;color:#333355;line-height:2.4;margin:14px 0 24px;">
+      Answer trivia. Play cards. Defeat the gods.<br>
+      Climb Mt. Olympus. Face Zeus.
+    </div>
+    <button class="btn primary" onclick="G.screen='name_entry';render();"
+      style="font-size:10px;padding:14px 28px;margin-bottom:10px;letter-spacing:2px;">
+      ▶ START GAME
+    </button>
+    <button class="btn blue" onclick="G.lbGodIdx=0;G.screen='leaderboard';renderLeaderboard();">
+      🏆 LEADERBOARD
+    </button>
+    <div style="margin-top:28px;font-size:4.5px;color:#1a1a33;">
+      © 2026 Jason Slaughter · PixelED Path, LLC
+    </div>
+  </div>`;
+}
+
+/* ─── NAME ENTRY ─── */
+function renderNameEntry(){
+  R.innerHTML=`
+  <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;padding:20px;text-align:center;">
+    <div class="sh">ENTER YOUR NAME</div>
+    <input type="text" id="nameIn" placeholder="YOUR NAME" maxlength="20"
+      value="${G.playerName}" style="margin-bottom:16px;text-align:center;">
+    <div style="font-size:6px;color:var(--muted);margin-bottom:10px;
+      text-transform:uppercase;letter-spacing:2px;">Select Class Period:</div>
+    <div class="period-btns" style="margin-bottom:24px;">
+      ${['1st','2nd','5th','6th'].map(p=>`
+        <button class="btn ${G.period===p?'primary':''}" onclick="G.period='${p}';render();">
+          ${p} Hour
+        </button>`).join('')}
+    </div>
+    <button class="btn primary" onclick="confirmName()">CONTINUE ▶</button>
+    <button class="btn" onclick="G.screen='title';render();" style="margin-top:8px;">◀ BACK</button>
+  </div>`;
+}
+async function confirmName(){
+  let n=document.getElementById('nameIn').value.trim();
+  if(!n){alert('Please enter your name!');return;}
+  if(!G.period){alert('Please select a class period!');return;}
+  G.playerName=n;
+  R.innerHTML=`<div style="text-align:center;padding:60px;font-size:8px;color:var(--gold);">
+    LOADING...<br><span class="cursor">_</span></div>`;
+  let loaded=await loadSave();
+  if(loaded){G.screen='map';}else{G.screen='hero_select';}
+  render();
+}
+
+/* ─── HERO SELECT (with video preview on each card) ─── */
+function renderHeroSelect(){
+  R.innerHTML=`
+  <div style="padding:16px;">
+    <div class="sh">CHOOSE YOUR HERO</div>
+    <div style="font-size:6px;color:var(--muted);text-align:center;margin-bottom:16px;">
+      Click a hero to preview their story. Then confirm your choice.
+    </div>
+    <div style="display:flex;flex-wrap:wrap;justify-content:center;">
+      ${HEROES.map(h=>`
+        <div class="hero-pick ${G.hero&&G.hero.id===h.id?'sel':''}"
+          style="border-color:${h.color};
+          ${G.hero&&G.hero.id===h.id?'box-shadow:0 0 25px '+h.color+';':''}
+          background:linear-gradient(160deg,rgba(0,0,0,.85),rgba(0,0,0,.6));"
+          onclick="previewHero('${h.id}')">
+          <video class="hero-pick-vid" autoplay loop muted playsinline>
+            <source src="${h.video}" type="video/mp4">
+          </video>
+          <div class="hero-pick-body">
+            <div style="font-size:32px;margin-bottom:8px;">${h.icon}</div>
+            <div style="font-size:8px;color:${h.color};margin-bottom:4px;">${h.name}</div>
+            <div style="font-size:5px;color:var(--muted);margin-bottom:10px;">${h.title}</div>
+            <div style="font-size:5px;color:#aaa;line-height:1.9;margin-bottom:8px;">
+              ❤️ ${h.maxHP} HP
+            </div>
+            <div style="font-size:4.8px;color:#888;line-height:1.8;">${h.desc}</div>
+            ${G.hero&&G.hero.id===h.id?
+              `<div style="margin-top:10px;font-size:5px;color:${h.color};border:1px solid ${h.color};
+                padding:4px 8px;">✓ SELECTED</div>`:''}
+          </div>
+        </div>`).join('')}
+    </div>
+    ${G.hero?`<div style="text-align:center;margin-top:16px;">
+      <button class="btn primary" onclick="confirmHero()" style="font-size:10px;padding:12px 22px;">
+        BEGIN WITH ${G.hero.name.toUpperCase()} ▶
+      </button>
+    </div>`:''}
+    <div style="text-align:center;margin-top:8px;">
+      <button class="btn" onclick="G.screen='name_entry';render();">◀ BACK</button>
+    </div>
+  </div>`;
+}
+
+function previewHero(id){
+  G.hero=HEROES.find(h=>h.id===id);
+  render();
+}
+
+function confirmHero(){
+  if(!G.hero)return;
+  // Show fullscreen cutscene video
+  let h=G.hero;
+  let el=document.createElement('div');
+  el.className='cutscene';el.id='csOverlay';
+  el.innerHTML=`
+    <video id="csVid" autoplay playsinline muted
+      style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.72;">
+      <source src="${h.video}" type="video/mp4">
+    </video>
+    <div class="cs-bg"></div>
+    <div class="cs-ui" style="padding:20px;text-align:center;">
+      <div style="font-size:7px;color:#888;letter-spacing:4px;margin-bottom:12px;">
+        YOUR HERO
+      </div>
+      <div style="font-size:18px;color:${h.color};letter-spacing:3px;margin-bottom:6px;
+        text-shadow:0 0 20px ${h.color},0 0 40px ${h.color};">${h.name}</div>
+      <div style="font-size:7px;color:#aaa;margin-bottom:16px;">${h.title}</div>
+      <div style="font-size:5.5px;color:#778;font-style:italic;margin-bottom:28px;
+        max-width:340px;line-height:2;">${h.flavor}</div>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+        <button class="btn primary" onclick="finishHeroSelect()"
+          style="font-size:10px;padding:14px 28px;">
+          BEGIN ASCENT ▶
+        </button>
+        <button class="btn" onclick="document.getElementById('csOverlay').remove();">
+          ◀ BACK
+        </button>
+      </div>
+    </div>`;
+  document.body.appendChild(el);
+}
+
+function finishHeroSelect(){
+  G.deck=[...G.hero.starterDeck];
+  G.defeatedGods=[];
+  G.hp=G.hero.maxHP;G.maxHP=G.hero.maxHP;G.maxMana=3;
+  let cs=document.getElementById('csOverlay');
+  if(cs)cs.remove();
+  G.screen='map';saveDeck();render();
+}
+
+/* ─── MAP ─── */
+function renderMap(){
+  if(!G.hero){G.screen='title';render();return;}
+  let next=G.defeatedGods.length;
+  let hpP=(G.hp/G.maxHP*100).toFixed(0);
+  R.innerHTML=`
+  <div style="padding:14px;">
+    <div class="sh">⚡ MT. OLYMPUS ASCENT ⚡</div>
+    <div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:10px;">
+      <div style="font-size:6px;line-height:2.2;">
+        <div><span style="color:var(--gold);">HERO:</span> ${G.hero.name}</div>
+        <div><span style="color:var(--gold);">PLAYER:</span> ${G.playerName}</div>
+        <div><span style="color:var(--gold);">PERIOD:</span> ${G.period} Hour</div>
+      </div>
+      <div style="font-size:6px;text-align:right;line-height:2.2;">
+        <div>❤️ ${G.hp}/${G.maxHP} HP</div>
+        <div>📦 ${G.deck.length} cards</div>
+        <div style="color:var(--gold);">⚡ ${G.defeatedGods.length}/9 gods</div>
+      </div>
+    </div>
+    <div class="hpwrap" style="margin-bottom:12px;">
+      <div class="hpbar ${hpc(hpP)}" style="width:${hpP}%"></div>
+    </div>
+    ${G.defeatedGods.length>0&&G.hp<G.maxHP?`
+    <div style="background:#05100a;border:1px solid #1a4a2a;padding:10px;
+      margin-bottom:12px;text-align:center;">
+      <div style="font-size:5.5px;color:var(--muted);margin-bottom:6px;">
+        ⛺ CAMPFIRE — Rest before climbing?
+      </div>
+      <button class="btn green sm" onclick="restHeal()">
+        REST (+${Math.floor(G.maxHP*.3)} HP)
+      </button>
+    </div>`:''}
+    <div style="text-align:center;font-size:6.5px;color:var(--gold);margin-bottom:8px;
+      text-shadow:0 0 8px var(--gold);">🏔️ SUMMIT — ZEUS</div>
+    ${[...GODS].reverse().map((god,ri)=>{
+      let i=GODS.length-1-ri;
+      let beat=G.defeatedGods.includes(god.id);
+      let avail=i<=next;
+      let cls=beat?'gbeat':avail?'gavail':'glocked';
+      return`<div class="gnode ${cls}" style="border-color:${cls==='glocked'?'#1a1a1a':god.color};
+          background:linear-gradient(90deg,rgba(0,0,0,.5),rgba(0,0,0,.2));"
+          onclick="${cls!=='glocked'?`startBattle(${i})`:''}">
+          <div style="font-size:24px;">${god.icon}</div>
+          <div style="flex:1;">
+            <div style="font-size:7px;color:${cls==='glocked'?'#333':god.color};">${god.name}</div>
+            <div style="font-size:5px;color:#445;">${god.title}</div>
+            <div style="font-size:4.5px;color:#334;">HP: ${god.maxHP} · Atk: ${god.atk[0]}-${god.atk[2]}</div>
+          </div>
+          <div style="font-size:14px;">
+            ${beat?'✅':avail?'⚔️':'🔒'}
+          </div>
+        </div>`;
+    }).join('')}
+    <div style="text-align:center;font-size:6px;color:#334;margin-top:8px;">
+      ⚔️ START HERE
+    </div>
+    <div style="display:flex;gap:6px;margin-top:16px;justify-content:center;flex-wrap:wrap;">
+      <button class="btn blue sm" onclick="G.screen='deck_view';render();">📦 VIEW DECK</button>
+      <button class="btn sm" onclick="G.lbGodIdx=0;G.screen='leaderboard';renderLeaderboard();">🏆 SCORES</button>
+      <button class="btn sm" onclick="G.screen='title';render();">🏠 TITLE</button>
+    </div>
+  </div>`;
+}
+
+function restHeal(){
+  let a=Math.floor(G.maxHP*.3);G.hp=clamp(G.hp+a,0,G.maxHP);render();
+}
+
+/* ─── BATTLE ─── */
+function renderBattle(){
+  if(!G.hero||!GODS[G.currentGodIdx]){G.screen='map';render();return;}
+  let god=GODS[G.currentGodIdx];
+  let hP=(G.hp/G.maxHP*100).toFixed(0);
+  let gP=(G.godHP/G.godMaxHP*100).toFixed(0);
+  R.innerHTML=`
+  <div style="padding:6px;">
+
+    <!-- GOD BANNER: full-width cinematic panel -->
+    <div class="god-banner">
+      <video class="god-bg-vid" autoplay loop muted playsinline>
+        <source src="${god.video}" type="video/mp4">
+      </video>
+      <div class="god-vignette"></div>
+      <div class="god-stats">
+        <div class="god-nameplate">
+          <div>
+            <div style="font-size:10px;color:${god.color};text-shadow:0 0 10px ${god.color};">
+              ${god.icon} ${god.name}
+            </div>
+            <div style="font-size:5px;color:#778;margin-top:2px;">${god.title}</div>
+          </div>
+          <div style="text-align:right;font-size:6px;color:#aaa;">
+            <div>${G.godHP} / ${G.godMaxHP} HP</div>
+            ${G.godBlock>0?`<div style="color:#4488ff;">🛡️ ${G.godBlock}</div>`:''}
+          </div>
+        </div>
+        <div class="hpwrap" style="margin-bottom:5px;">
+          <div class="hpbar ${hpc(gP)}" style="width:${gP}%"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            ${G.gPoison>0?`<span class="bdg bdg-psn">☠️ Poison:${G.gPoison}</span>`:''}
+            ${G.gWeak>0?`<span class="bdg bdg-weak">💚 Weak:${G.gWeak}</span>`:''}
+            ${G.gVuln>0?`<span class="bdg bdg-vuln">💜 Vuln:${G.gVuln}</span>`:''}
+            ${G.gStun>0?`<span class="bdg bdg-stun">⭐ Stun:${G.gStun}</span>`:''}
+          </div>
+          <div class="intent-bar">${getIntent()}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PLAYER STRIP -->
+    <div class="player-strip">
+      <div>
+        <div style="font-size:6px;color:var(--green);margin-bottom:3px;">
+          ${G.hero.icon} ${G.hero.name}
+        </div>
+        <div class="label">HP: ${G.hp}/${G.maxHP}</div>
+        <div class="hpwrap" style="margin-bottom:4px;">
+          <div class="hpbar ${hpc(hP)}" style="width:${hP}%"></div>
+        </div>
+        ${G.block>0?`<div style="font-size:5px;color:#4488ff;">🛡️ Block: ${G.block}</div>`:''}
+        ${G.strength>0?`<div style="font-size:5px;color:#ff8800;">💪 Strength: +${G.strength}</div>`:''}
+        <div>
+          ${G.pWeak>0?`<span class="bdg bdg-weak">💚 Weak:${G.pWeak}</span>`:''}
+          ${G.pVuln>0?`<span class="bdg bdg-vuln">💜 Vuln:${G.pVuln}</span>`:''}
+          ${G.pPoison>0?`<span class="bdg bdg-psn">☠️ Poison:${G.pPoison}</span>`:''}
+          ${G.doubleNext?`<span class="bdg bdg-str">⚡ DOUBLE</span>`:''}
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div class="label" style="text-align:right;">MANA (${G.mana}/${G.maxMana})</div>
+        <div style="margin-bottom:4px;">
+          ${Array.from({length:G.maxMana}).map((_,i)=>
+            `<span class="pip ${i<G.mana?'on':'off'}"></span>`).join('')}
+        </div>
+        <div style="font-size:5px;color:#334;">
+          📚 ${G.deck.length} deck · 🗑️ ${G.discard.length} disc · ⏱️ Turn ${G.turnCount}
+        </div>
+      </div>
+    </div>
+
+    <!-- BATTLE LOG -->
+    <div class="battle-log">
+      ${G.log.map(l=>`<div style="color:${l.c};">> ${l.msg}</div>`).join('')}
+    </div>
+
+    <!-- TRIVIA / PLAY / ENEMY -->
+    ${G.phase==='trivia'?renderTrivia():''}
+    ${G.phase==='play'?renderPlay():''}
+    ${G.phase==='enemy'?`<div style="text-align:center;padding:16px;font-size:8px;
+      color:#dd4444;animation:slideIn .2s;">⚔️ ${god.name} attacks!</div>`:''}
+  </div>`;
+}
+
+function renderTrivia(){
+  let q=G.triviaQ;if(!q)return'';
+  if(G.triviaAnswered){
+    return`<div class="trivia-box" style="text-align:center;">
+      <div style="font-size:8px;color:#44ff88;margin-bottom:12px;">
+        ✅ CORRECT! YOUR TURN!
+      </div>
+      <button class="btn primary" onclick="G.phase='play';render();">PLAY CARDS ▶</button>
+    </div>`;
+  }
+  return`<div class="trivia-box">
+    <div class="t-lbl">Turn ${G.turnCount} — Answer correctly to play cards!</div>
+    <div class="t-q">${q.q}</div>
+    <div class="t-choices">
+      ${q.c.map((ch,i)=>`
+        <button class="t-btn" id="tc${i}" onclick="answerTrivia(${i})">
+          ${['A','B','C','D'][i]}) ${ch}
+        </button>`).join('')}
+    </div>
+    <div style="font-size:5px;color:#222240;margin-top:8px;text-align:right;">
+      Wrong answer = lose turn ⚠️
+    </div>
+  </div>`;
+}
+
+function renderPlay(){
+  return`<div>
+    <div style="font-size:6px;color:#44ff88;text-align:center;margin-bottom:4px;">
+      YOUR TURN — ${G.mana} mana left
+      ${G.costReduce>0?'(cards -'+G.costReduce+' cost)':''}
+    </div>
+    <div class="hand-row">
+      ${G.hand.map((id,i)=>mkHandCard(id,i)).join('')}
+    </div>
+    <div style="text-align:center;margin-top:6px;">
+      <button class="btn red" onclick="endPlayerTurn()">END TURN ⏭️</button>
+    </div>
+  </div>`;
+}
+
+function answerTrivia(i){
+  let q=G.triviaQ;
+  let btns=document.querySelectorAll('.t-btn');
+  btns.forEach(b=>b.style.pointerEvents='none');
+  if(i===q.a){
+    if(btns[i])btns[i].classList.add('correct');
+    G.triviaAnswered=true;alog('✅ Correct! Take your turn.','#44ff88');
+    setTimeout(()=>{G.phase='play';render();},700);
+  }else{
+    if(btns[i])btns[i].classList.add('wrong');
+    if(btns[q.a])btns[q.a].classList.add('correct');
+    alog('❌ Wrong! '+q.c[q.a]+' was correct. Losing turn!','#ff4444');
+    setTimeout(()=>{G.phase='enemy';render();setTimeout(enemyTurn,1000);},1600);
+  }
+}
+
+/* ─── CARD REWARD ─── */
+function renderCardReward(){
+  let god=GODS[G.currentGodIdx];
+  if(G.rewardPhase==='pick'){
+    R.innerHTML=`
+    <div style="padding:18px;text-align:center;">
+      <div style="font-size:28px;margin-bottom:10px;">🏆</div>
+      <div class="sh">VICTORY!</div>
+      <div style="font-size:6px;color:${god.color};margin-bottom:4px;">
+        ${god.name} defeated!
+      </div>
+      <div style="font-size:5px;color:#445;margin-bottom:8px;font-style:italic;">
+        "${god.flavor}"
+      </div>
+      <div class="divider">· · · · ·</div>
+      <div style="font-size:7px;margin:14px 0;">
+        CHOOSE A CARD TO ADD TO YOUR DECK:
+      </div>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:16px;">
+        ${G.cardRewards.map(id=>mkCard(id,`pickCard('${id}')`)).join('')}
+      </div>
+      <button class="btn sm" onclick="skipCardPick()">SKIP — No new card</button>
+    </div>`;
+  }else{
+    let grouped={};G.deck.forEach(id=>{grouped[id]=(grouped[id]||0)+1;});
+    R.innerHTML=`
+    <div style="padding:16px;text-align:center;">
+      <div class="sh">REMOVE A CARD?</div>
+      <div style="font-size:5.5px;color:var(--muted);margin-bottom:14px;">
+        Click a card to remove it from your deck (optional)
+      </div>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:16px;">
+        ${Object.entries(grouped).map(([id,ct])=>`
+          <div style="position:relative;">
+            ${mkCard(id,`removeCard('${id}')`)}
+            ${ct>1?`<div style="position:absolute;top:-5px;right:-5px;background:var(--gold);
+              color:#000;border-radius:50%;width:16px;height:16px;display:flex;
+              align-items:center;justify-content:center;font-size:7px;font-weight:bold;">
+              ${ct}</div>`:''}
+          </div>`).join('')}
+      </div>
+      <button class="btn green" onclick="finishReward()">KEEP DECK — Continue ▶</button>
+    </div>`;
+  }
+}
+
+function pickCard(id){G.deck.push(id);alog('Added '+CARDS[id].name+'!','#FFD700');
+  G.rewardPhase='remove';saveDeck();render();}
+function skipCardPick(){G.rewardPhase='remove';render();}
+function removeCard(id){
+  let i=G.deck.indexOf(id);if(i>-1)G.deck.splice(i,1);
+  alog('Removed '+CARDS[id].name+'.','#888');saveDeck();finishReward();
+}
+function finishReward(){G.screen='map';render();}
+
+/* ─── DECK VIEW ─── */
+function renderDeckView(){
+  let grouped={};G.deck.forEach(id=>{grouped[id]=(grouped[id]||0)+1;});
+  R.innerHTML=`
+  <div style="padding:14px;">
+    <div class="sh">YOUR DECK (${G.deck.length} cards)</div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:16px;">
+      ${Object.entries(grouped).map(([id,ct])=>`
+        <div style="position:relative;">
+          ${mkCard(id,'')}
+          ${ct>1?`<div style="position:absolute;top:-5px;right:-5px;background:var(--gold);
+            color:#000;border-radius:50%;width:16px;height:16px;display:flex;
+            align-items:center;justify-content:center;font-size:7px;font-weight:bold;">
+            ${ct}</div>`:''}
+        </div>`).join('')}
+    </div>
+    <div style="text-align:center;">
+      <button class="btn" onclick="G.screen='map';render();">◀ BACK TO MAP</button>
+    </div>
+  </div>`;
+}
+
+/* ─── GAME OVER ─── */
+function renderGameOver(){
+  R.innerHTML=`
+  <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;text-align:center;padding:20px;">
+    <div style="font-size:40px;margin-bottom:12px;filter:drop-shadow(0 0 10px #ff3300);">💀</div>
+    <div class="sh" style="color:#dd3300;">DEFEATED...</div>
+    <div style="font-size:6px;color:var(--muted);margin-bottom:10px;line-height:2.2;">
+      The gods of Olympus have proven too powerful.
+    </div>
+    <div style="font-size:6px;line-height:2.4;color:#556;margin-bottom:20px;">
+      Fell against <span style="color:var(--gold);">${GODS[G.currentGodIdx].name}</span><br>
+      Gods defeated: ${G.defeatedGods.length}/9<br>
+      Turns survived: ${G.turnCount}
+    </div>
+    <div class="divider">· · · · ·</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px;">
+      <button class="btn primary" onclick="retryBattle()">↺ RETRY (50% HP)</button>
+      <button class="btn green" onclick="G.screen='map';G.hp=G.maxHP;render();">
+        🗺️ MAP (Full HP)
+      </button>
+      <button class="btn" onclick="G.screen='title';render();">🏠 TITLE</button>
+    </div>
+  </div>`;
+}
+function retryBattle(){G.hp=Math.max(1,Math.floor(G.maxHP*.5));startBattle(G.currentGodIdx);}
+
+/* ─── VICTORY ─── */
+function renderVictory(){
+  R.innerHTML=`
+  <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;text-align:center;padding:20px;
+    background:radial-gradient(ellipse at 50% 30%,#2a1a00 0%,#070710 70%);">
+    <div style="font-size:48px;margin-bottom:10px;
+      filter:drop-shadow(0 0 20px #FFD700);">⚡🏆⚡</div>
+    <div style="font-size:12px;color:var(--gold);animation:titleGlow 1.5s infinite;
+      letter-spacing:4px;margin-bottom:4px;">MT. OLYMPUS</div>
+    <div style="font-size:12px;color:var(--gold);animation:titleGlow 1.5s infinite;
+      letter-spacing:4px;margin-bottom:14px;">CONQUERED!</div>
+    <div class="divider" style="letter-spacing:8px;">★ ★ ★ ★ ★</div>
+    <div style="font-size:6px;color:#aab;margin:16px 0;line-height:2.6;">
+      Hero: ${G.hero.name}<br>
+      Cards: ${G.deck.length}<br>HP Left: ${G.hp}/${G.maxHP}<br>All 9 gods defeated!
+    </div>
+    <div style="font-size:8px;color:var(--gold);margin-bottom:20px;">
+      "${G.playerName}" has ascended to Olympus!
+    </div>
+    <button class="btn primary" onclick="G.screen='title';render();">🏠 PLAY AGAIN</button>
+  </div>`;
+}
+
+/* ─── LEADERBOARD ─── */
+async function renderLeaderboard(){
+  if(!G.period)G.period='1st';
+  let god=GODS[G.lbGodIdx];
+  R.innerHTML=`
+  <div style="padding:14px;">
+    <div class="sh">🏆 LEADERBOARD</div>
+    <div style="font-size:5.5px;color:var(--muted);text-align:center;margin-bottom:10px;">
+      Period: ${G.period} Hour
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center;margin-bottom:14px;">
+      ${GODS.map((g,i)=>`
+        <button class="btn sm ${i===G.lbGodIdx?'primary':''}"
+          onclick="G.lbGodIdx=${i};renderLeaderboard();">
+          ${g.icon}${g.name.split(' ')[0]}
+        </button>`).join('')}
+    </div>
+    <div style="font-size:8px;color:${god.color};text-align:center;margin-bottom:4px;">
+      ${god.icon} ${god.name}
+    </div>
+    <div style="font-size:5px;color:#445;text-align:center;margin-bottom:12px;">
+      Fewest turns to defeat
+    </div>
+    <div id="lbContent" style="font-size:6px;text-align:center;color:var(--muted);">
+      Loading...
+    </div>
+    <div style="text-align:center;margin-top:16px;">
+      <button class="btn" onclick="G.screen='title';render();">◀ BACK</button>
+    </div>
+  </div>`;
+  let entries=await getBoard(god.id);
+  let el=document.getElementById('lbContent');if(!el)return;
+  if(!entries.length){
+    el.innerHTML='<div style="color:#1a1a33;">No scores yet. Be the first!</div>';return;
+  }
+  el.innerHTML=`
+  <table style="width:100%;border-collapse:collapse;font-size:5.5px;">
+    <tr style="color:var(--gold);border-bottom:1px solid #111;">
+      <td style="padding:5px;text-align:left;">Rank</td>
+      <td style="padding:5px;text-align:left;">Name</td>
+      <td style="padding:5px;text-align:center;">Turns</td>
+      <td style="padding:5px;text-align:center;">HP Left</td>
+    </tr>
+    ${entries.map((e,i)=>`
+      <tr style="border-bottom:1px solid #0a0a0f;
+        color:${e.name===G.playerName?'var(--gold)':'#667799'};">
+        <td style="padding:5px;text-align:left;">${['🥇','🥈','🥉'][i]||'#'+(i+1)}</td>
+        <td style="padding:5px;text-align:left;">${e.name}</td>
+        <td style="padding:5px;text-align:center;">${e.turns}</td>
+        <td style="padding:5px;text-align:center;color:#44ff88;">${e.hp}</td>
+      </tr>`).join('')}
+  </table>`;
+}
+
+render();
+</script>
+</body>
+</html>
