@@ -183,8 +183,8 @@ html,body{background:var(--dark);color:var(--text);font-family:'Press Start 2P',
   flex-shrink:0;position:relative;z-index:2;
   transform-origin:bottom center;
 }
-.sp-hero{transform:scale(1.4) scaleX(-1);}
-.sp-god {transform:scale(1.4);}
+.sp-hero{transform:scale(1.4);}
+.sp-god {transform:scale(1.4) scaleX(-1);}
 
 /* Mover translation animations */
 .mv-atk-l{animation:mvLeft  .38s ease-in-out;}
@@ -314,10 +314,16 @@ input::placeholder{color:#3344aa;}
   0%,100%{text-shadow:0 0 20px var(--gold),0 0 40px var(--gold2);}
   50%    {text-shadow:0 0 35px #fff,0 0 70px var(--gold);}
 }
-@keyframes floatUp{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-55px)}}
+@keyframes fdmgPop{
+  0%  {opacity:0;transform:scale(.15) translateY(0);}
+  18% {opacity:1;transform:scale(1.8) translateY(-4px);}
+  50% {opacity:1;transform:scale(1.1) translateY(-18px);}
+  100%{opacity:0;transform:scale(.85) translateY(-54px);}
+}
 .cursor{animation:blink 1s infinite;}
-.fdmg{position:fixed;font-family:'Press Start 2P',monospace;font-size:14px;
-  pointer-events:none;animation:floatUp 1s forwards;z-index:999;}
+.fdmg{position:fixed;font-family:'Press Start 2P',monospace;font-size:20px;
+  font-weight:bold;pointer-events:none;animation:fdmgPop .88s ease-out forwards;
+  z-index:9999;text-shadow:0 0 12px currentColor,2px 2px 0 #000;white-space:nowrap;}
 #musicBtn{
   position:fixed;bottom:14px;right:14px;z-index:600;
   font-family:'Press Start 2P',monospace;font-size:7px;
@@ -821,11 +827,70 @@ function pickN(a,n){return shuffle(a).slice(0,n);}
 function clamp(v,lo,hi){return Math.max(lo,Math.min(hi,v));}
 function hpc(p){return p<30?'low':p<60?'med':'hi';}
 function alog(msg,c='#aabbcc'){G.log.unshift({msg,c});if(G.log.length>25)G.log.pop();}
-function fdmg(msg,c='#ff4444'){
+function fdmg(msg,c='#ff4444',side='god'){
   let e=document.createElement('div');e.className='fdmg';
   e.textContent=msg;e.style.color=c;
-  e.style.left=rnd(220,480)+'px';e.style.top=rnd(120,200)+'px';
-  document.body.appendChild(e);setTimeout(()=>e.remove(),950);
+  let slot=document.getElementById(side==='hero'?'heroSlot':'godSlot');
+  if(slot){
+    let r=slot.getBoundingClientRect();
+    e.style.left=(r.left+r.width/2-20+rnd(-18,18))+'px';
+    e.style.top=(r.top+rnd(8,28))+'px';
+  } else {
+    e.style.left=rnd(200,500)+'px';e.style.top=rnd(100,180)+'px';
+  }
+  document.body.appendChild(e);setTimeout(()=>e.remove(),920);
+}
+
+/* ─── Synthesized sound effects — no external files needed ───────────────── */
+function _hitSfx(heavy){
+  try{
+    let A=new(window.AudioContext||window.webkitAudioContext)();
+    let t=A.currentTime;
+    // Pitched thud (low sine drop)
+    let o=A.createOscillator();o.type='sine';
+    o.frequency.setValueAtTime(heavy?175:115,t);
+    o.frequency.exponentialRampToValueAtTime(18,t+.09);
+    let g=A.createGain();g.gain.setValueAtTime(.75,t);
+    g.gain.exponentialRampToValueAtTime(.001,t+.11);
+    o.connect(g);g.connect(A.destination);o.start(t);o.stop(t+.11);
+    // Noise impact crunch
+    let len=Math.floor(A.sampleRate*.15);
+    let buf=A.createBuffer(1,len,A.sampleRate);
+    let d=buf.getChannelData(0);
+    for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.8);
+    let n=A.createBufferSource();n.buffer=buf;
+    let lp=A.createBiquadFilter();lp.type='lowpass';lp.frequency.value=heavy?1100:550;
+    let g2=A.createGain();g2.gain.setValueAtTime(heavy?.7:.45,t);
+    g2.gain.exponentialRampToValueAtTime(.001,t+.14);
+    n.connect(lp);lp.connect(g2);g2.connect(A.destination);n.start(t);
+    setTimeout(()=>A.close(),500);
+  }catch(e){}
+}
+function _healSfx(){
+  try{
+    let A=new(window.AudioContext||window.webkitAudioContext)();
+    let t=A.currentTime;
+    [0,4,7].forEach((semi,i)=>{
+      let o=A.createOscillator();o.type='sine';
+      o.frequency.value=523*Math.pow(2,semi/12);
+      let g=A.createGain();g.gain.setValueAtTime(0,t+i*.07);
+      g.gain.linearRampToValueAtTime(.28,t+i*.07+.025);
+      g.gain.exponentialRampToValueAtTime(.001,t+i*.07+.22);
+      o.connect(g);g.connect(A.destination);o.start(t+i*.07);o.stop(t+i*.07+.22);
+    });
+    setTimeout(()=>A.close(),600);
+  }catch(e){}
+}
+function _blockSfx(){
+  try{
+    let A=new(window.AudioContext||window.webkitAudioContext)();
+    let t=A.currentTime;
+    let o=A.createOscillator();o.type='square';o.frequency.value=310;
+    let hp=A.createBiquadFilter();hp.type='highpass';hp.frequency.value=250;
+    let g=A.createGain();g.gain.setValueAtTime(.45,t);g.gain.exponentialRampToValueAtTime(.001,t+.09);
+    o.connect(hp);hp.connect(g);g.connect(A.destination);o.start(t);o.stop(t+.09);
+    setTimeout(()=>A.close(),300);
+  }catch(e){}
 }
 
 /* ═══════════════ FIREBASE ═══════════════ */
@@ -896,10 +961,10 @@ function dealDmg(amt,pierce=false){
     d=Math.max(0,d-b);if(b>0)alog('Blocked '+b+' dmg!','#4488ff');
   }else alog('Pierce! Ignores block!','#FFD700');
   G.godHP=Math.max(0,G.godHP-d);
-  if(d>0){alog('You deal '+d+' to '+god.name+'!','#ffaa44');fdmg('-'+d,'#ffaa44');sfx('damage');}
+  if(d>0){alog('You deal '+d+' to '+god.name+'!','#ffaa44');fdmg('-'+d,'#ffaa44','god');_hitSfx(d>15);}
 }
 function gainBlk(n){G.block+=n;alog('You gain '+n+' block.','#4488ff');}
-function healHP(n){G.hp=clamp(G.hp+n,0,G.maxHP);alog('You heal '+n+' HP.','#44ff88');}
+function healHP(n){G.hp=clamp(G.hp+n,0,G.maxHP);alog('You heal '+n+' HP.','#44ff88');fdmg('+'+n,'#44ff88','hero');_healSfx();}
 function gWk(n){G.gWeak=Math.max(G.gWeak,n);alog(GODS[G.currentGodIdx].name+' is Weakened!','#aaff44');}
 function gVl(n){G.gVuln=Math.max(G.gVuln,n);alog(GODS[G.currentGodIdx].name+' is Vulnerable!','#ff88ff');}
 function gPs(n){G.gPoison+=n;alog(GODS[G.currentGodIdx].name+' poisoned +'+n+'!','#44ffcc');}
@@ -1054,8 +1119,9 @@ function gAtk(dmg,god){
   if(b>0&&G.blockThorns>0){G.godHP=Math.max(0,G.godHP-G.blockThorns);
     alog('Thorns: '+G.blockThorns+' reflected!','#ff8800');}
   G.hp=Math.max(0,G.hp-hit);
-  if(b>0)alog('Block absorbs '+b+'!','#4488ff');
-  alog(god.name+' hits for '+hit+'!','#ff4444');fdmg('-'+hit,'#ff4444');render();
+  if(b>0){alog('Block absorbs '+b+'!','#4488ff');fdmg('+'+b+'🛡','#4488ff','hero');_blockSfx();}
+  if(hit>0){alog(god.name+' hits for '+hit+'!','#ff4444');fdmg('-'+hit,'#ff4444','hero');_hitSfx(hit>12);}
+  render();
 }
 
 function getIntent(){
