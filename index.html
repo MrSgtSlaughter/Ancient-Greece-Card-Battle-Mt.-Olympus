@@ -285,6 +285,8 @@ const MUSIC=['music.mp3','music2.mp3','music3.mp3','music5.mp3'];
 // Battle-ready backgrounds (exact filenames from zip)
 const BGVIDS=['background1.mp4','background2.mp4','background3.mp4',
               'background4.mp4','background5.mp4','background6.mp4','backgounrd7.mp4'];
+const WIN_VIDS=['win1.mp4','win2.mp4','win3.mp4','win4.mp4','win5.mp4'];
+const LOSE_VIDS=['lose1.mp4','lose2.mp4','lose3.mp4','lose4.mp4','lose5.mp4'];
 const SFX_MAP={
   cardPlay:  ['card-slide-1.ogg','card-slide-2.ogg','card-slide-4.ogg'],
   cardDraw:  ['card-place-1.ogg','card-place-2.ogg'],
@@ -792,6 +794,51 @@ function getIntent(){
   }
 }
 
+/* ─── WIN / LOSE CUTSCENES ─── */
+let _resultCB=null,_resultTimer=null;
+
+function showResultCutscene(vids,title,titleColor,subtitle,cb){
+  // Pause music slightly during cutscene
+  if(_musicEl){_musicEl.volume=0.1;}
+  _resultCB=cb;
+  let src=vids[rnd(0,vids.length-1)];
+  let el=document.createElement('div');
+  el.className='cutscene';el.id='resultCS';
+  el.innerHTML=`
+    <video id="resultVid" autoplay playsinline
+      style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">
+      <source src="${src}" type="video/mp4">
+    </video>
+    <div class="cs-bg"></div>
+    <div style="position:absolute;top:24px;left:0;right:0;text-align:center;z-index:2;
+      animation:fadeInUp .6s ease;">
+      <div style="font-size:15px;color:${titleColor};letter-spacing:3px;
+        text-shadow:0 0 20px ${titleColor},0 0 50px ${titleColor};
+        animation:titleGlow 1.2s infinite;">${title}</div>
+      <div style="font-size:6px;color:#aaa;margin-top:8px;letter-spacing:2px;">${subtitle}</div>
+    </div>
+    <div style="position:absolute;bottom:28px;left:0;right:0;text-align:center;z-index:2;">
+      <button class="btn sm" onclick="proceedResult()" style="opacity:.7;font-size:7px;">
+        SKIP ▶▶
+      </button>
+    </div>`;
+  document.body.appendChild(el);
+  // Auto-advance when video ends
+  let vid=document.getElementById('resultVid');
+  if(vid)vid.addEventListener('ended',proceedResult);
+  // Safety fallback — max 12 seconds
+  _resultTimer=setTimeout(proceedResult,12000);
+}
+
+function proceedResult(){
+  clearTimeout(_resultTimer);
+  // Restore music volume
+  if(_musicEl)_musicEl.volume=0.35;
+  let el=document.getElementById('resultCS');
+  if(el)el.remove();
+  if(_resultCB){let cb=_resultCB;_resultCB=null;cb();}
+}
+
 function checkBattleEnd(){
   if(G.godHP<=0){
     let god=GODS[G.currentGodIdx];
@@ -802,10 +849,17 @@ function checkBattleEnd(){
     pool=[...new Set(pool)].filter(id=>id&&CARDS[id]);
     G.cardRewards=pickN(pool,3);G.rewardPhase='pick';
     saveDeck();
-    G.screen=G.currentGodIdx===GODS.length-1?'victory':'card_reward';
-    render();return;
+    let nextScreen=G.currentGodIdx===GODS.length-1?'victory':'card_reward';
+    showResultCutscene(WIN_VIDS,'⚡ VICTORY! ⚡','#FFD700',
+      god.name.toUpperCase()+' HAS FALLEN',
+      ()=>{G.screen=nextScreen;render();});
+    return;
   }
-  if(G.hp<=0){G.screen='game_over';render();}
+  if(G.hp<=0){
+    showResultCutscene(LOSE_VIDS,'💀 DEFEATED 💀','#dd3300',
+      'THE GODS OF OLYMPUS PREVAIL',
+      ()=>{G.screen='game_over';render();});
+  }
 }
 
 function getRewardPool(){
