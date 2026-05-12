@@ -805,9 +805,19 @@ function fdmg(msg,c='#ff4444'){
 }
 
 /* ═══════════════ FIREBASE ═══════════════ */
-async function fbGet(p){try{let r=await fetch(FIREBASE+p+'.json');return await r.json();}catch{return null;}}
-async function fbSet(p,d){try{await fetch(FIREBASE+p+'.json',{method:'PUT',body:JSON.stringify(d)});}catch{}}
-async function fbPush(p,d){try{let r=await fetch(FIREBASE+p+'.json',{method:'POST',body:JSON.stringify(d)});return await r.json();}catch{return null;}}
+// 4-second timeout — school networks silently drop blocked domains instead of rejecting
+async function fbFetch(url, opts){
+  const ctrl=new AbortController();
+  const tid=setTimeout(()=>ctrl.abort(),4000);
+  try{
+    let r=await fetch(url,{...opts,signal:ctrl.signal});
+    clearTimeout(tid);
+    return r;
+  }catch{clearTimeout(tid);return null;}
+}
+async function fbGet(p){try{let r=await fbFetch(FIREBASE+p+'.json');return r?await r.json():null;}catch{return null;}}
+async function fbSet(p,d){try{await fbFetch(FIREBASE+p+'.json',{method:'PUT',body:JSON.stringify(d)});}catch{}}
+async function fbPush(p,d){try{let r=await fbFetch(FIREBASE+p+'.json',{method:'POST',body:JSON.stringify(d)});return r?await r.json():null;}catch{return null;}}
 
 async function saveDeck(){
   if(!G.playerName||!G.hero)return;
@@ -1329,8 +1339,12 @@ async function confirmName(){
   if(!G.period){alert('Please select a class period!');return;}
   G.playerName=n;
   R.innerHTML=`<div style="text-align:center;padding:60px;font-size:8px;color:var(--gold);">
-    LOADING...<br><span class="cursor">_</span></div>`;
-  let loaded=await loadSave();
+    LOADING...<br><span class="cursor">_</span>
+    <div style="margin-top:16px;font-size:5.5px;color:#445;line-height:2;">
+      Checking for saved progress...
+    </div></div>`;
+  let loaded=false;
+  try{loaded=await loadSave();}catch{loaded=false;}
   if(loaded){G.screen='map';}else{G.screen='hero_select';}
   render();
 }
