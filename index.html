@@ -274,7 +274,8 @@ input::placeholder{color:#3344aa;}
 </style>
 </head>
 <body>
-<div id="game"></div>
+<div id="bgLayer" style="position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;"></div>
+<div id="game" style="position:relative;z-index:1;max-width:820px;margin:0 auto;padding:8px;"></div>
 <script>
 'use strict';
 const FIREBASE='https://minigolf-fd9ea-default-rtdb.firebaseio.com';
@@ -285,17 +286,17 @@ const MUSIC=['music.mp3','music2.mp3','music3.mp3','music5.mp3'];
 const BGVIDS=['background1.mp4','background2.mp4','background3.mp4',
               'background4.mp4','background5.mp4','background6.mp4','backgounrd7.mp4'];
 const SFX_MAP={
-  cardPlay:  ['Audio/card-slide-1.ogg','Audio/card-slide-2.ogg','Audio/card-slide-4.ogg'],
-  cardDraw:  ['Audio/card-place-1.ogg','Audio/card-place-2.ogg'],
-  shuffle:   'Audio/card-shuffle.ogg',
-  click:     ['Audio/click1.ogg','Audio/click2.ogg','Audio/click3.ogg'],
-  hover:     ['Audio/rollover1.ogg','Audio/rollover2.ogg','Audio/rollover3.ogg'],
-  correct:   'Audio/switch22.ogg',
-  wrong:     'Audio/switch36.ogg',
-  damage:    ['Audio/chip-lay-1.ogg','Audio/chip-lay-2.ogg','Audio/chip-lay-3.ogg'],
-  victory:   'Audio/cards-pack-open-1.ogg',
-  fight:     'Audio/dice-shake-1.ogg',
-  deal:      'Audio/card-fan-1.ogg',
+  cardPlay:  ['card-slide-1.ogg','card-slide-2.ogg','card-slide-4.ogg'],
+  cardDraw:  ['card-place-1.ogg','card-place-2.ogg'],
+  shuffle:   'card-shuffle.ogg',
+  click:     ['click1.ogg','click2.ogg','click3.ogg'],
+  hover:     ['rollover1.ogg','rollover2.ogg','rollover3.ogg'],
+  correct:   'switch22.ogg',
+  wrong:     'switch36.ogg',
+  damage:    ['chip-lay-1.ogg','chip-lay-2.ogg','chip-lay-3.ogg'],
+  victory:   'cards-pack-open-1.ogg',
+  fight:     'dice-shake-1.ogg',
+  deal:      'card-fan-1.ogg',
 };
 let _musicEl=null, _musicIdx=-1, _audioOn=false, _bgIdx=0;
 
@@ -330,12 +331,17 @@ function pickBg(exclude){
 let _titleBg=BGVIDS[rnd(0,BGVIDS.length-1)];
 let _mapBg=pickBg(BGVIDS.indexOf(_titleBg));
 
-function bgVidHTML(src, opacity='0.22'){
-  return `<video style="position:fixed;inset:0;width:100%;height:100%;object-fit:cover;
-    opacity:${opacity};z-index:-1;pointer-events:none;" autoplay loop muted playsinline>
+function setBgVideo(src, opacity){
+  let layer=document.getElementById('bgLayer');
+  if(!layer)return;
+  if(!src){layer.innerHTML='';return;}
+  layer.innerHTML=`<video style="width:100%;height:100%;object-fit:cover;opacity:${opacity||0.25};"
+    autoplay loop muted playsinline>
     <source src="${src}" type="video/mp4">
   </video>`;
 }
+// legacy alias kept for safety
+function bgVidHTML(){return'';}
 
 /* ═══════════════ CARD LIBRARY ═══════════════ */
 const CARDS={
@@ -814,7 +820,7 @@ function showGodCutscene(idx){
   let el=document.createElement('div');
   el.className='cutscene';el.id='godCS';
   el.innerHTML=`
-    <video class="cs-vid" autoplay loop muted playsinline>
+    <video class="cs-vid" autoplay loop playsinline>
       <source src="${god.video}" type="video/mp4">
     </video>
     <div class="cs-bg"></div>
@@ -951,8 +957,8 @@ function render(){
 /* ─── TITLE ─── */
 function renderTitle(){
   _titleBg=BGVIDS[rnd(0,BGVIDS.length-1)];
+  setBgVideo(_titleBg, 0.28);
   R.innerHTML=`
-  ${bgVidHTML(_titleBg,'0.28')}
   <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;
     justify-content:center;text-align:center;padding:20px;
     background:radial-gradient(ellipse at 50% 30%,rgba(26,16,48,.85) 0%,rgba(7,7,16,.92) 70%);">
@@ -1068,7 +1074,7 @@ function confirmHero(){
   let el=document.createElement('div');
   el.className='cutscene';el.id='csOverlay';
   el.innerHTML=`
-    <video id="csVid" autoplay playsinline muted
+    <video id="csVid" autoplay playsinline
       style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.72;">
       <source src="${h.video}" type="video/mp4">
     </video>
@@ -1110,8 +1116,8 @@ function renderMap(){
   let next=G.defeatedGods.length;
   let hpP=(G.hp/G.maxHP*100).toFixed(0);
   _mapBg=pickBg(BGVIDS.indexOf(_titleBg));
+  setBgVideo(_mapBg, 0.2);
   R.innerHTML=`
-  ${bgVidHTML(_mapBg,'0.2')}
   <div style="padding:14px;">
     <div class="sh">⚡ MT. OLYMPUS ASCENT ⚡</div>
     <div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:10px;">
@@ -1178,6 +1184,7 @@ function restHeal(){
 /* ─── BATTLE ─── */
 function renderBattle(){
   if(!G.hero||!GODS[G.currentGodIdx]){G.screen='map';render();return;}
+  setBgVideo(null);
   let god=GODS[G.currentGodIdx];
   let hP=(G.hp/G.maxHP*100).toFixed(0);
   let gP=(G.godHP/G.godMaxHP*100).toFixed(0);
@@ -1397,6 +1404,7 @@ function renderDeckView(){
 
 /* ─── GAME OVER ─── */
 function renderGameOver(){
+  setBgVideo(null);
   R.innerHTML=`
   <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;
     justify-content:center;text-align:center;padding:20px;">
