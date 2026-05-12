@@ -113,10 +113,10 @@ html,body{background:var(--dark);color:var(--text);font-family:'Press Start 2P',
 
 /* Text window — bottom parchment panel y:120–176 */
 .c-txt{
-  position:absolute;top:120px;left:12px;right:12px;bottom:12px;
+  position:absolute;top:120px;left:18px;right:14px;bottom:12px;
   display:flex;flex-direction:column;justify-content:space-between;
 }
-.c-dsc{font-size:4.5px;color:#2a1600;line-height:1.8;}
+.c-dsc{font-size:4.5px;color:#2a1600;line-height:1.9;padding-left:2px;}
 .c-rar{font-size:4px;text-align:right;margin-top:2px;}
 .rar-common  {color:#6a4400;}
 .rar-uncommon{color:#7a5500;}
@@ -131,7 +131,7 @@ html,body{background:var(--dark);color:var(--text);font-family:'Press Start 2P',
 }
 .god-bg-vid{
   position:absolute;inset:0;width:100%;height:100%;
-  object-fit:cover;opacity:.6;z-index:0;
+  object-fit:cover;opacity:.42;z-index:0;
 }
 .god-vignette{
   position:absolute;inset:0;z-index:1;
@@ -278,6 +278,64 @@ input::placeholder{color:#3344aa;}
 <script>
 'use strict';
 const FIREBASE='https://minigolf-fd9ea-default-rtdb.firebaseio.com';
+
+/* ═══════════════ AUDIO SYSTEM ═══════════════ */
+const MUSIC=['music.mp3','music2.mp3','music3.mp3','music5.mp3'];
+// Battle-ready backgrounds (exact filenames from zip)
+const BGVIDS=['background1.mp4','background2.mp4','background3.mp4',
+              'background4.mp4','background5.mp4','background6.mp4','backgounrd7.mp4'];
+const SFX_MAP={
+  cardPlay:  ['Audio/card-slide-1.ogg','Audio/card-slide-2.ogg','Audio/card-slide-4.ogg'],
+  cardDraw:  ['Audio/card-place-1.ogg','Audio/card-place-2.ogg'],
+  shuffle:   'Audio/card-shuffle.ogg',
+  click:     ['Audio/click1.ogg','Audio/click2.ogg','Audio/click3.ogg'],
+  hover:     ['Audio/rollover1.ogg','Audio/rollover2.ogg','Audio/rollover3.ogg'],
+  correct:   'Audio/switch22.ogg',
+  wrong:     'Audio/switch36.ogg',
+  damage:    ['Audio/chip-lay-1.ogg','Audio/chip-lay-2.ogg','Audio/chip-lay-3.ogg'],
+  victory:   'Audio/cards-pack-open-1.ogg',
+  fight:     'Audio/dice-shake-1.ogg',
+  deal:      'Audio/card-fan-1.ogg',
+};
+let _musicEl=null, _musicIdx=-1, _audioOn=false, _bgIdx=0;
+
+function initAudio(){
+  if(_audioOn)return;
+  _audioOn=true;
+  _musicEl=new Audio();
+  _musicEl.volume=0.35;
+  _musicEl.addEventListener('ended',()=>{
+    // BUG FIX: modular rotation — safe with any track count, no infinite loop risk
+    let step=MUSIC.length>1?1+rnd(0,MUSIC.length-2):0;
+    _musicIdx=(_musicIdx+step)%MUSIC.length;
+    _musicEl.src=MUSIC[_musicIdx];_musicEl.play().catch(()=>{});
+  });
+  _musicIdx=rnd(0,MUSIC.length-1);
+  _musicEl.src=MUSIC[_musicIdx];
+  _musicEl.play().catch(()=>{});
+}
+
+function sfx(key){
+  if(!_audioOn)return;
+  let s=SFX_MAP[key];if(!s)return;
+  if(Array.isArray(s))s=s[rnd(0,s.length-1)];
+  let a=new Audio(s);a.volume=0.65;a.play().catch(()=>{});
+}
+
+function pickBg(exclude){
+  let choices=BGVIDS.filter((_,i)=>i!==exclude);
+  return choices[rnd(0,choices.length-1)];
+}
+// Each screen gets a stable random bg for its session
+let _titleBg=BGVIDS[rnd(0,BGVIDS.length-1)];
+let _mapBg=pickBg(BGVIDS.indexOf(_titleBg));
+
+function bgVidHTML(src, opacity='0.22'){
+  return `<video style="position:fixed;inset:0;width:100%;height:100%;object-fit:cover;
+    opacity:${opacity};z-index:-1;pointer-events:none;" autoplay loop muted playsinline>
+    <source src="${src}" type="video/mp4">
+  </video>`;
+}
 
 /* ═══════════════ CARD LIBRARY ═══════════════ */
 const CARDS={
@@ -574,7 +632,7 @@ function dealDmg(amt,pierce=false){
     d=Math.max(0,d-b);if(b>0)alog('Blocked '+b+' dmg!','#4488ff');
   }else alog('Pierce! Ignores block!','#FFD700');
   G.godHP=Math.max(0,G.godHP-d);
-  if(d>0){alog('You deal '+d+' to '+god.name+'!','#ffaa44');fdmg('-'+d,'#ffaa44');}
+  if(d>0){alog('You deal '+d+' to '+god.name+'!','#ffaa44');fdmg('-'+d,'#ffaa44');sfx('damage');}
 }
 function gainBlk(n){G.block+=n;alog('You gain '+n+' block.','#4488ff');}
 function healHP(n){G.hp=clamp(G.hp+n,0,G.maxHP);alog('You heal '+n+' HP.','#44ff88');}
@@ -591,7 +649,7 @@ function playCard(id,i){
   if(G.mana<cost){alog('Not enough mana!','#ff4444');return;}
   G.mana-=cost;G.hand.splice(i,1);G.discard.push(id);
   let m=G.doubleNext?2:1;G.doubleNext=false;
-  alog('Playing '+c.name+'!','#FFD700');
+  alog('Playing '+c.name+'!','#FFD700');sfx('cardPlay');
   switch(c.et){
     case 'damage':          dealDmg(c.ev*m);break;
     case 'damage_pierce':   dealDmg(c.ev*m,true);break;
@@ -655,7 +713,7 @@ function startPlayerTurn(){
     alog('Poison: -'+p+' HP!','#44ffcc');G.pPoison=Math.max(0,G.pPoison-1);}
   if(G.pWeak>0)G.pWeak--;
   if(G.pVuln>0)G.pVuln--;
-  G.hand=[];drawCards(5);G.turnCount++;
+  G.hand=[];drawCards(5);sfx('cardDraw');G.turnCount++;
   G.triviaQ=TRIVIA[rnd(0,TRIVIA.length-1)];
   G.triviaAnswered=false;render();
 }
@@ -731,7 +789,7 @@ function getIntent(){
 function checkBattleEnd(){
   if(G.godHP<=0){
     let god=GODS[G.currentGodIdx];
-    alog('🏆 '+god.name.toUpperCase()+' DEFEATED!','#FFD700');
+    alog('🏆 '+god.name.toUpperCase()+' DEFEATED!','#FFD700');sfx('victory');
     if(!G.defeatedGods.includes(god.id))G.defeatedGods.push(god.id);
     recordWin(god.id);
     let pool=[god.reward,...god.extras,...getRewardPool()];
@@ -748,17 +806,71 @@ function getRewardPool(){
   return pickN(Object.keys(CARDS).filter(id=>CARDS[id].rarity!=='common'||Math.random()<0.3),8);
 }
 
+/* ─── GOD PRE-BATTLE CUTSCENE ─── */
+function showGodCutscene(idx){
+  if(!_audioOn)initAudio();
+  sfx('fight');
+  let god=GODS[idx];let hero=G.hero;
+  let el=document.createElement('div');
+  el.className='cutscene';el.id='godCS';
+  el.innerHTML=`
+    <video class="cs-vid" autoplay loop muted playsinline>
+      <source src="${god.video}" type="video/mp4">
+    </video>
+    <div class="cs-bg"></div>
+    <div class="cs-ui" style="padding:24px;text-align:center;width:100%;max-width:500px;">
+      <div style="display:flex;justify-content:space-around;align-items:center;
+        margin-bottom:18px;gap:10px;">
+        <div style="text-align:center;">
+          <div style="font-size:36px;filter:drop-shadow(0 0 8px ${hero.color});">${hero.icon}</div>
+          <div style="font-size:7px;color:${hero.color};margin-top:4px;">${hero.name}</div>
+          <div style="font-size:5px;color:#778;margin-top:2px;">❤️ ${G.hp}/${G.maxHP}</div>
+        </div>
+        <div style="font-size:18px;color:var(--gold);text-shadow:0 0 20px var(--gold),
+          0 0 40px var(--gold2);letter-spacing:4px;">VS</div>
+        <div style="text-align:center;">
+          <div style="font-size:36px;filter:drop-shadow(0 0 8px ${god.color});">${god.icon}</div>
+          <div style="font-size:7px;color:${god.color};margin-top:4px;">${god.name}</div>
+          <div style="font-size:5px;color:#778;margin-top:2px;">❤️ ${god.maxHP}</div>
+        </div>
+      </div>
+      <div style="font-size:5px;color:#778;font-style:italic;margin-bottom:24px;
+        max-width:340px;line-height:2;">"${god.flavor}"</div>
+      <div id="fightBtnWrap" style="opacity:0;transition:opacity .6s;">
+        <button class="btn primary" onclick="beginFight(${idx})"
+          style="font-size:11px;padding:14px 32px;letter-spacing:3px;">
+          ⚔️ FIGHT!
+        </button>
+        <button class="btn" onclick="document.getElementById('godCS').remove();"
+          style="margin-left:10px;font-size:7px;">
+          ← BACK
+        </button>
+      </div>
+    </div>`;
+  document.body.appendChild(el);
+  setTimeout(()=>{let b=document.getElementById('fightBtnWrap');if(b)b.style.opacity='1';},1400);
+}
+
+function beginFight(idx){
+  let cs=document.getElementById('godCS');if(cs)cs.remove();
+  startBattle(idx);
+}
+
 function startBattle(idx){
   let god=GODS[idx];
   G.currentGodIdx=idx;
-  G.hp=G.hp>0?G.hp:G.maxHP;G.maxHP=G.hero.maxHP;
+  // BUG FIX: set maxHP FIRST so the hp clamp is correct
+  G.maxHP=G.hero.maxHP;
+  G.hp=clamp(G.hp>0?G.hp:G.maxHP,1,G.maxHP);
   G.block=0;G.strength=0;G.mana=G.maxMana;G.bonusMana=0;
   G.blockThorns=0;G.costReduce=0;G.doubleNext=false;
   G.pWeak=0;G.pVuln=0;G.pPoison=0;
   G.godHP=god.maxHP;G.godMaxHP=god.maxHP;G.godBlock=0;
   G.gWeak=0;G.gVuln=0;G.gStun=0;G.gPoison=0;G.godPatternIdx=0;
   G.turnCount=0;G.log=[];
-  G.deck=shuffle([...G.deck]);G.hand=[];G.discard=[];
+  // BUG FIX: recombine all card piles before shuffle — hand+discard are NOT lost on retry
+  let allCards=[...G.deck,...G.hand,...G.discard];
+  G.deck=shuffle(allCards);G.hand=[];G.discard=[];
   G.screen='battle';drawCards(5);
   G.triviaQ=TRIVIA[rnd(0,TRIVIA.length-1)];
   G.triviaAnswered=false;G.phase='trivia';render();
@@ -838,10 +950,12 @@ function render(){
 
 /* ─── TITLE ─── */
 function renderTitle(){
+  _titleBg=BGVIDS[rnd(0,BGVIDS.length-1)];
   R.innerHTML=`
+  ${bgVidHTML(_titleBg,'0.28')}
   <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;
     justify-content:center;text-align:center;padding:20px;
-    background:radial-gradient(ellipse at 50% 30%,#1a1030 0%,#070710 70%);">
+    background:radial-gradient(ellipse at 50% 30%,rgba(26,16,48,.85) 0%,rgba(7,7,16,.92) 70%);">
     <div style="font-size:52px;margin-bottom:10px;filter:drop-shadow(0 0 20px #FFD700);">⚡🏔️⚡</div>
     <div style="font-size:14px;color:var(--gold);animation:titleGlow 2s infinite;margin-bottom:4px;
       letter-spacing:4px;">MT. OLYMPUS</div>
@@ -854,11 +968,11 @@ function renderTitle(){
       Answer trivia. Play cards. Defeat the gods.<br>
       Climb Mt. Olympus. Face Zeus.
     </div>
-    <button class="btn primary" onclick="G.screen='name_entry';render();"
+    <button class="btn primary" onclick="initAudio();G.screen='name_entry';render();"
       style="font-size:10px;padding:14px 28px;margin-bottom:10px;letter-spacing:2px;">
       ▶ START GAME
     </button>
-    <button class="btn blue" onclick="G.lbGodIdx=0;G.screen='leaderboard';renderLeaderboard();">
+    <button class="btn blue" onclick="initAudio();G.lbGodIdx=0;G.screen='leaderboard';renderLeaderboard();">
       🏆 LEADERBOARD
     </button>
     <div style="margin-top:28px;font-size:4.5px;color:#1a1a33;">
@@ -995,7 +1109,9 @@ function renderMap(){
   if(!G.hero){G.screen='title';render();return;}
   let next=G.defeatedGods.length;
   let hpP=(G.hp/G.maxHP*100).toFixed(0);
+  _mapBg=pickBg(BGVIDS.indexOf(_titleBg));
   R.innerHTML=`
+  ${bgVidHTML(_mapBg,'0.2')}
   <div style="padding:14px;">
     <div class="sh">⚡ MT. OLYMPUS ASCENT ⚡</div>
     <div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:10px;">
@@ -1032,7 +1148,7 @@ function renderMap(){
       let cls=beat?'gbeat':avail?'gavail':'glocked';
       return`<div class="gnode ${cls}" style="border-color:${cls==='glocked'?'#1a1a1a':god.color};
           background:linear-gradient(90deg,rgba(0,0,0,.5),rgba(0,0,0,.2));"
-          onclick="${cls!=='glocked'?`startBattle(${i})`:''}">
+          onclick="${cls!=='glocked'?`showGodCutscene(${i})`:''}">
           <div style="font-size:24px;">${god.icon}</div>
           <div style="flex:1;">
             <div style="font-size:7px;color:${cls==='glocked'?'#333':god.color};">${god.name}</div>
@@ -1192,12 +1308,12 @@ function answerTrivia(i){
   btns.forEach(b=>b.style.pointerEvents='none');
   if(i===q.a){
     if(btns[i])btns[i].classList.add('correct');
-    G.triviaAnswered=true;alog('✅ Correct! Take your turn.','#44ff88');
+    G.triviaAnswered=true;sfx('correct');alog('✅ Correct! Take your turn.','#44ff88');
     setTimeout(()=>{G.phase='play';render();},700);
   }else{
     if(btns[i])btns[i].classList.add('wrong');
     if(btns[q.a])btns[q.a].classList.add('correct');
-    alog('❌ Wrong! '+q.c[q.a]+' was correct. Losing turn!','#ff4444');
+    sfx('wrong');alog('❌ Wrong! '+q.c[q.a]+' was correct. Losing turn!','#ff4444');
     setTimeout(()=>{G.phase='enemy';render();setTimeout(enemyTurn,1000);},1600);
   }
 }
