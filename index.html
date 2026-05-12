@@ -459,16 +459,21 @@ let _musicEl=null, _musicIdx=-1, _audioOn=false, _bgIdx=0, _musicMuted=false;
 function initAudio(){
   if(_audioOn)return;
   _audioOn=true;
-  _musicEl=new Audio();
-  _musicEl.volume=0.35;
-  _musicEl.addEventListener('ended',()=>{
-    let step=MUSIC.length>1?1+rnd(0,MUSIC.length-2):0;
-    _musicIdx=(_musicIdx+step)%MUSIC.length;
-    _musicEl.src=MUSIC[_musicIdx];_musicEl.play().catch(()=>{});
-  });
-  _musicIdx=rnd(0,MUSIC.length-1);
-  _musicEl.src=MUSIC[_musicIdx];
-  _musicEl.play().catch(()=>{});
+  try{
+    _musicEl=new Audio();
+    _musicEl.volume=_musicMuted?0:0.35;
+    _musicEl.addEventListener('ended',()=>{
+      let step=MUSIC.length>1?1+rnd(0,MUSIC.length-2):0;
+      _musicIdx=(_musicIdx+step)%MUSIC.length;
+      try{_musicEl.src=MUSIC[_musicIdx];_musicEl.play().catch(()=>{});}catch(e){}
+    });
+    _musicIdx=rnd(0,MUSIC.length-1);
+    _musicEl.src=MUSIC[_musicIdx];
+    _musicEl.play().catch(()=>{});
+  }catch(e){
+    // Audio not supported or blocked — game continues without music
+    _musicEl=null;
+  }
 }
 
 function toggleMusic(){
@@ -1366,6 +1371,16 @@ window.onerror=function(msg,src,line){
 function render(){
   if(!R)return;
   try{
+  // ── Stale overlay sweep (Wrestling Story pattern) ──────────────────────────
+  // Any screen transition should nuke overlays that belong to a different state.
+  // Prevents "cutscene stuck on screen / name entry invisible" bug.
+  var _safeScreens=['title','name_entry','hero_select','game_over','victory','leaderboard','deck_view','card_reward'];
+  if(_safeScreens.indexOf(G.screen)!==-1){
+    ['csOverlay','godCS','resultCS'].forEach(function(id){
+      var _o=document.getElementById(id);if(_o)_o.remove();
+    });
+  }
+  // ─────────────────────────────────────────────────────────────────────────
   window.scrollTo(0,0);
   switch(G.screen){
     case 'title':       renderTitle();break;
@@ -1458,8 +1473,6 @@ async function confirmName(){
   if(!n){alert('Please enter your name!');return;}
   if(!G.period){alert('Please select a class period!');return;}
   G.playerName=n;
-  var pre=document.getElementById('preloadScreen');
-  if(pre)pre.style.display='none';
   R.innerHTML=`<div style="text-align:center;padding:60px;font-size:8px;color:var(--gold);">
     LOADING...<br><span class="cursor">_</span>
     <div style="margin-top:16px;font-size:5.5px;color:#445;line-height:2;">
