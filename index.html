@@ -174,7 +174,7 @@ html,body{background:var(--dark);color:var(--text);font-family:'Press Start 2P',
 }
 .sprite-mover{position:relative;display:inline-block;}
 .sprite{
-  display:block;background-image:url('battle.jpg');
+  display:block;background-image:url('battle.png');
   background-size:960px 960px;background-repeat:no-repeat;
   image-rendering:pixelated;image-rendering:crisp-edges;
   flex-shrink:0;position:relative;z-index:2;
@@ -327,7 +327,7 @@ const FIREBASE='https://minigolf-fd9ea-default-rtdb.firebaseio.com';
 /* ═══════════════ AUDIO SYSTEM ═══════════════ */
 const MUSIC=['music.mp3','music2.mp3','music3.mp3','music5.mp3'];
 
-/* ── SPRITE SHEET: battle.jpg (960×960) ──
+/* ── SPRITE SHEET: battle.png (960×960, transparent bg) ──
    Heroes: w=149, h=221, 3 cols × 4 rows, top=60
    Gods:   w=228, h=221, 2 cols × 4 rows, top=60   */
 const HERO_SPRITES={
@@ -515,6 +515,85 @@ const CARDS={
   labyrinth:    {id:'labyrinth',    name:'Labyrinth',       cost:2,type:'special',rarity:'rare',     art:'🌀', desc:'3 dmg. Stun 1 turn.',                     et:'damage_stun',  ev:[3,1]},
   aegis:        {id:'aegis',        name:'Aegis of Zeus',   cost:2,type:'defense',rarity:'legendary',art:'🛡️', desc:'15 block. +1 Strength.',                  et:'block_strength',ev:[15,1]},
   hades_crown:  {id:'hades_crown',  name:"Hades' Crown",    cost:2,type:'special',rarity:'legendary',art:'👑', desc:'5 dmg. Heal 10 HP.',                      et:'damage_heal',  ev:[5,10]},
+
+  // ── GREEK MYTH EXPANSION ──
+  pegasus_leap: {id:'pegasus_leap', name:'Pegasus Leap',    cost:2,type:'special',rarity:'uncommon', art:'🐎', desc:'Next card FREE + DOUBLED.',               et:'double_next',  ev:0},
+  harpy_swipe:  {id:'harpy_swipe',  name:'Harpy Swipe',     cost:1,type:'attack', rarity:'common',   art:'🦅', desc:'6 dmg. Draw 1 card.',                     et:'damage_draw',  ev:[6,1]},
+  minotaur_ram: {id:'minotaur_ram', name:'Minotaur Ram',    cost:2,type:'attack', rarity:'uncommon', art:'🐂', desc:'Sacrifice 6 HP. Deal 20 dmg.',            et:'sacrifice',    ev:[6,20]},
+  siren_song:   {id:'siren_song',   name:'Siren Song',      cost:2,type:'special',rarity:'rare',     art:'🎵', desc:'Stun enemy 1 turn. Apply Weak.',          et:'stun_weak',    ev:2},
+  phoenix_fire: {id:'phoenix_fire', name:'Phoenix Fire',    cost:2,type:'attack', rarity:'rare',     art:'🔥', desc:'10 dmg. Apply 3 Poison.',                 et:'damage_poison',ev:[10,3]},
+  chimera_blast:{id:'chimera_blast',name:'Chimera Blast',   cost:3,type:'attack', rarity:'rare',     art:'🦁', desc:'14 dmg. Apply 4 Poison.',                 et:'damage_poison',ev:[14,4]},
+  hephaestus:   {id:'hephaestus',   name:'Forge of Hephestus',cost:2,type:'special',rarity:'uncommon',art:'⚒️',desc:'Gain 4 Strength.',                        et:'strength',     ev:4},
+  oracle_sight: {id:'oracle_sight', name:'Oracle Sight',    cost:1,type:'special',rarity:'common',   art:'🔮', desc:'Draw 3 cards.',                           et:'draw',         ev:3},
+  nemesis_blade:{id:'nemesis_blade',name:'Nemesis Blade',   cost:3,type:'attack', rarity:'rare',     art:'⚖️', desc:'5 dmg. 30 dmg if enemy < 25% HP.',        et:'execute',      ev:[5,30,25]},
+  boreas_wind:  {id:'boreas_wind',  name:'Boreas Wind',     cost:2,type:'attack', rarity:'uncommon', art:'🌬️', desc:'10 dmg. Stun enemy 1 turn.',              et:'damage_stun',  ev:[10,1]},
+  atlas_stance: {id:'atlas_stance', name:'Atlas Stance',    cost:2,type:'defense',rarity:'uncommon', art:'🏛️', desc:'Gain 20 block.',                          et:'block',        ev:20},
+  nemean_lion:  {id:'nemean_lion',  name:'Nemean Lion',     cost:2,type:'attack', rarity:'uncommon', art:'🦁', desc:'Strike 2× for 8 each.',                   et:'multi_damage', ev:[8,2]},
+  gordian_knot: {id:'gordian_knot', name:'Gordian Knot',    cost:2,type:'special',rarity:'rare',     art:'🪢', desc:'All cards cost 2 less this turn.',         et:'cost_reduce',  ev:2},
+  hero_sprint:  {id:'hero_sprint',  name:'Hero Sprint',     cost:0,type:'special',rarity:'common',   art:'💨', desc:'Gain 2 mana.',                            et:'mana_gain',    ev:2},
+  hydra_regen:  {id:'hydra_regen',  name:'Hydra Regen',     cost:2,type:'healing',rarity:'uncommon', art:'🐍', desc:'Heal 10 HP. Remove debuffs.',             et:'heal_cleanse', ev:10},
+  titan_smash:  {id:'titan_smash',  name:'Titan Smash',     cost:3,type:'attack', rarity:'rare',     art:'⛰️', desc:'22 dmg. Apply Vulnerable.',               et:'damage_vuln',  ev:[22,2]},
+  golden_apple: {id:'golden_apple', name:'Golden Apple',    cost:1,type:'healing',rarity:'common',   art:'🍎', desc:'Heal 7 HP.',                              et:'heal',         ev:7},
+  achilles_rage:{id:'achilles_rage',name:"Achilles' Rage",  cost:3,type:'attack', rarity:'rare',     art:'⚡', desc:'20 dmg. Pierces block.',                  et:'damage_pierce',ev:20},
+  spartan_spear:{id:'spartan_spear',name:'Spartan Spear',   cost:2,type:'attack', rarity:'uncommon', art:'🔱', desc:'12 dmg. Apply Vulnerable.',               et:'damage_vuln',  ev:[12,2]},
+  wardens_oath: {id:'wardens_oath', name:"Warden's Oath",   cost:1,type:'defense',rarity:'common',   art:'🛡️', desc:'Gain 7 block.',                           et:'block',        ev:7},
+
+  // ── ELEMENTAL / MAGIC ──
+  fireball:     {id:'fireball',     name:'Fireball',        cost:2,type:'attack', rarity:'uncommon', art:'🔥', desc:'Deal 14 damage.',                         et:'damage',       ev:14},
+  ice_spike:    {id:'ice_spike',    name:'Ice Spike',       cost:2,type:'attack', rarity:'uncommon', art:'🧊', desc:'9 dmg. Stun enemy 1 turn.',               et:'damage_stun',  ev:[9,1]},
+  chain_light:  {id:'chain_light',  name:'Chain Lightning', cost:2,type:'attack', rarity:'uncommon', art:'⚡', desc:'Strike 3× for 6 each.',                   et:'multi_damage', ev:[6,3]},
+  blizzard:     {id:'blizzard',     name:'Blizzard',        cost:3,type:'attack', rarity:'rare',     art:'❄️', desc:'8 dmg. Apply 5 Poison.',                  et:'damage_poison',ev:[8,5]},
+  arcane_surge: {id:'arcane_surge', name:'Arcane Surge',    cost:1,type:'special',rarity:'common',   art:'✨', desc:'Gain 3 mana.',                            et:'mana_gain',    ev:3},
+  runic_ward:   {id:'runic_ward',   name:'Runic Ward',      cost:2,type:'defense',rarity:'uncommon', art:'🔷', desc:'Gain 18 block.',                          et:'block',        ev:18},
+  holy_light:   {id:'holy_light',   name:'Holy Light',      cost:2,type:'healing',rarity:'uncommon', art:'🕊️', desc:'Heal 10 HP. Remove debuffs.',             et:'heal_cleanse', ev:10},
+  void_blast:   {id:'void_blast',   name:'Void Blast',      cost:3,type:'attack', rarity:'rare',     art:'🌌', desc:'24 dmg. Pierces block.',                  et:'damage_pierce',ev:24},
+  time_warp:    {id:'time_warp',    name:'Time Warp',       cost:3,type:'special',rarity:'rare',     art:'⏰', desc:'Draw 4 cards. Gain 2 mana.',              et:'draw_mana',    ev:[4,2]},
+  mana_infusion:{id:'mana_infusion',name:'Mana Infusion',   cost:0,type:'special',rarity:'uncommon', art:'💎', desc:'+3 mana next turn.',                      et:'mana_next',    ev:3},
+  inferno:      {id:'inferno',      name:'Inferno',         cost:3,type:'attack', rarity:'rare',     art:'🌋', desc:'14 dmg. Apply 6 Poison.',                 et:'damage_poison',ev:[14,6]},
+  frost_shield: {id:'frost_shield', name:'Frost Shield',    cost:2,type:'defense',rarity:'uncommon', art:'💠', desc:'12 block. Reflect 4 dmg.',                et:'block_thorns', ev:[12,4]},
+  mystic_bolt:  {id:'mystic_bolt',  name:'Mystic Bolt',     cost:1,type:'attack', rarity:'common',   art:'🔮', desc:'Deal 8 damage.',                          et:'damage',       ev:8},
+  arcane_armor: {id:'arcane_armor', name:'Arcane Armor',    cost:2,type:'defense',rarity:'uncommon', art:'🌠', desc:'15 block. +1 Strength.',                  et:'block_strength',ev:[15,1]},
+  dark_ritual:  {id:'dark_ritual',  name:'Dark Ritual',     cost:2,type:'attack', rarity:'rare',     art:'🕯️', desc:'Sacrifice 5 HP. Deal 20 dmg.',            et:'sacrifice',    ev:[5,20]},
+  lightning_storm:{id:'lightning_storm',name:'Lightning Storm',cost:3,type:'attack',rarity:'rare',   art:'⛈️', desc:'5 dmg × 5 hits.',                        et:'multi_damage', ev:[5,5]},
+  meteor_strike:{id:'meteor_strike',name:'Meteor Strike',   cost:3,type:'attack', rarity:'legendary',art:'☄️', desc:'32 dmg. Pierces block.',                  et:'damage_pierce',ev:32},
+  war_cry:      {id:'war_cry',      name:'War Cry',         cost:1,type:'special',rarity:'uncommon', art:'📢', desc:'Apply Weak AND Vulnerable to enemy.',     et:'double_debuff',ev:2},
+  power_surge:  {id:'power_surge',  name:'Power Surge',     cost:0,type:'special',rarity:'common',   art:'💥', desc:'Gain 1 Strength.',                        et:'strength',     ev:1},
+
+  // ── DRAGONS ──
+  dragon_breath:{id:'dragon_breath',name:'Dragon Breath',   cost:3,type:'attack', rarity:'rare',     art:'🐲', desc:'18 dmg. Apply 5 Poison.',                et:'damage_poison',ev:[18,5]},
+  wyrm_scales:  {id:'wyrm_scales',  name:'Wyrm Scales',     cost:2,type:'defense',rarity:'rare',     art:'🐉', desc:'14 block. Reflect 5 dmg.',               et:'block_thorns', ev:[14,5]},
+  dragon_roar:  {id:'dragon_roar',  name:'Dragon Roar',     cost:2,type:'special',rarity:'uncommon', art:'🦕', desc:'Apply Weak AND Vulnerable.',              et:'double_debuff',ev:2},
+  dragon_claw:  {id:'dragon_claw',  name:'Dragon Claw',     cost:2,type:'attack', rarity:'uncommon', art:'🦖', desc:'Strike 4× for 5 each.',                   et:'multi_damage', ev:[5,4]},
+  ancient_dragon:{id:'ancient_dragon',name:'Ancient Dragon',cost:3,type:'attack', rarity:'legendary',art:'🐲', desc:'35 dmg. Pierces block.',                  et:'damage_pierce',ev:35},
+  wyvern_fire:  {id:'wyvern_fire',  name:'Wyvern Fire',     cost:2,type:'attack', rarity:'uncommon', art:'🐉', desc:'12 dmg. Apply Vulnerable.',               et:'damage_vuln',  ev:[12,2]},
+  serpent_bite: {id:'serpent_bite', name:'Serpent Bite',    cost:1,type:'attack', rarity:'common',   art:'🐍', desc:'5 dmg. Apply 2 Poison.',                  et:'damage_poison',ev:[5,2]},
+
+  // ── CREATIVE / COMBO ──
+  coin_flip:    {id:'coin_flip',    name:'Coin Flip',       cost:1,type:'special',rarity:'uncommon', art:'🪙', desc:'50%: deal 25 dmg OR heal 25 HP.',         et:'coin_flip',    ev:25},
+  blood_sacrifice:{id:'blood_sacrifice',name:'Blood Sacrifice',cost:2,type:'attack',rarity:'rare',   art:'🩸', desc:'Sacrifice 10 HP. Deal 28 dmg.',           et:'sacrifice',    ev:[10,28]},
+  whirlwind_bl: {id:'whirlwind_bl', name:'Whirlwind Blades',cost:3,type:'attack', rarity:'rare',     art:'🌪️', desc:'Strike 5× for 5 each.',                   et:'multi_damage', ev:[5,5]},
+  overdrive:    {id:'overdrive',    name:'Overdrive',       cost:1,type:'special',rarity:'uncommon', art:'⚡', desc:'Sacrifice 3 HP. +2 Str, +2 mana.',        et:'overdrive',    ev:[3,2,2]},
+  phantom_blade:{id:'phantom_blade',name:'Phantom Blade',   cost:2,type:'attack', rarity:'uncommon', art:'👻', desc:'16 dmg. Pierces block.',                  et:'damage_pierce',ev:16},
+  blood_pact:   {id:'blood_pact',   name:'Blood Pact',      cost:1,type:'attack', rarity:'uncommon', art:'💉', desc:'8 dmg. Heal 8 HP.',                       et:'damage_heal',  ev:[8,8]},
+  soul_harvest: {id:'soul_harvest', name:'Soul Harvest',    cost:3,type:'attack', rarity:'rare',     art:'💀', desc:'14 dmg. Heal 8 HP.',                      et:'damage_heal',  ev:[14,8]},
+  berserk_mode: {id:'berserk_mode', name:'Berserk Mode',    cost:2,type:'special',rarity:'rare',     art:'😡', desc:'Gain 5 Strength.',                        et:'strength',     ev:5},
+  lucky_star:   {id:'lucky_star',   name:'Lucky Star',      cost:2,type:'attack', rarity:'uncommon', art:'⭐', desc:'Deal 3-30 random dmg.',                   et:'random_damage',ev:[3,30]},
+  divine_wrath: {id:'divine_wrath', name:'Divine Wrath',    cost:3,type:'attack', rarity:'legendary',art:'☁️', desc:'Strike 4× for 10 each.',                  et:'multi_damage', ev:[10,4]},
+  cursed_blade: {id:'cursed_blade', name:'Cursed Blade',    cost:2,type:'attack', rarity:'uncommon', art:'🗡️', desc:'12 dmg. Apply 4 Poison.',                 et:'damage_poison',ev:[12,4]},
+  arena_cheer:  {id:'arena_cheer',  name:'Arena Cheer',     cost:0,type:'special',rarity:'common',   art:'📣', desc:'Draw 2 cards. Gain 1 mana.',              et:'draw_mana',    ev:[2,1]},
+  death_blow:   {id:'death_blow',   name:'Death Blow',      cost:3,type:'attack', rarity:'rare',     art:'💥', desc:'5 dmg, or 35 if enemy < 20% HP.',         et:'execute',      ev:[5,35,20]},
+  titan_guard:  {id:'titan_guard',  name:'Titan Guard',     cost:2,type:'defense',rarity:'rare',     art:'🏰', desc:'Gain 25 block.',                          et:'block',        ev:25},
+  parry:        {id:'parry',        name:'Parry',           cost:1,type:'defense',rarity:'common',   art:'🤺', desc:'Gain 6 block.',                           et:'block',        ev:6},
+  battle_hymn2: {id:'battle_hymn2', name:'Battle Hymn',     cost:1,type:'special',rarity:'common',   art:'🥁', desc:'Gain 2 Strength. Draw 1 card.',           et:'str_draw',     ev:[2,1]},
+  combo_strike: {id:'combo_strike', name:'Combo Strike',    cost:1,type:'attack', rarity:'common',   art:'👊', desc:'Strike 2× for 4 each.',                   et:'multi_damage', ev:[4,2]},
+  iron_skin:    {id:'iron_skin',    name:'Iron Skin',       cost:1,type:'defense',rarity:'common',   art:'🦾', desc:'Gain 9 block.',                           et:'block',        ev:9},
+  rage_draw:    {id:'rage_draw',    name:'Battle Focus',    cost:1,type:'special',rarity:'common',   art:'🎯', desc:'Draw 2 cards.',                           et:'draw',         ev:2},
+  serene_mind:  {id:'serene_mind',  name:'Serene Mind',     cost:1,type:'healing',rarity:'common',   art:'🧘', desc:'Heal 6 HP. Gain 1 mana.',                 et:'heal_mana',    ev:[6,1]},
+  smite:        {id:'smite',        name:'Smite',           cost:2,type:'attack', rarity:'uncommon', art:'✝️', desc:'16 dmg. Removes 1 debuff from you.',      et:'damage_cleanse',ev:16},
+  backstab:     {id:'backstab',     name:'Backstab',        cost:1,type:'attack', rarity:'uncommon', art:'🗡️', desc:'10 dmg. Pierces block.',                  et:'damage_pierce',ev:10},
+  earthquake:   {id:'earthquake',   name:'Earthquake',      cost:2,type:'attack', rarity:'uncommon', art:'🌍', desc:'Sacrifice 4 HP. 16 dmg. Vulnerable.',     et:'quake',        ev:[4,16]},
+  necro_blade:  {id:'necro_blade',  name:'Necro Blade',     cost:2,type:'attack', rarity:'rare',     art:'🪄', desc:'8 dmg + 5 dmg. Apply 3 Poison.',          et:'damage_poison',ev:[13,3]},
+  titan_punch:  {id:'titan_punch',  name:'Titan Punch',     cost:2,type:'attack', rarity:'common',   art:'👊', desc:'Deal 13 damage.',                         et:'damage',       ev:13},
 };
 
 /* ═══════════════ HEROES ═══════════════ */
@@ -799,6 +878,32 @@ function playCard(id,i){
     case 'random_damage':   dealDmg(rnd(c.ev[0],c.ev[1])*m);break;
     case 'heal_cleanse':    healHP(c.ev);G.pWeak=0;G.pVuln=0;alog('Debuffs removed!','#44ff88');break;
     case 'mana_next':       G.bonusMana+=c.ev;alog('+'+c.ev+' mana next turn!','#4488ff');break;
+    // ── NEW EFFECT TYPES ──
+    case 'damage_draw':     dealDmg(c.ev[0]*m);drawCards(c.ev[1]);break;
+    case 'draw_mana':       drawCards(c.ev[0]);G.mana=clamp(G.mana+c.ev[1],0,10);alog('+'+c.ev[1]+' mana!','#4488ff');break;
+    case 'str_draw':        G.strength+=c.ev[0];drawCards(c.ev[1]);alog('+'+c.ev[0]+' Str + draw '+c.ev[1]+'!','#ff8800');break;
+    case 'heal_mana':       healHP(c.ev[0]);G.mana=clamp(G.mana+c.ev[1],0,10);alog('Healed + mana!','#44ff88');break;
+    case 'stun_weak':       gSt(c.ev);gWk(c.ev);alog('Enemy Stunned + Weakened!','#ffff44');break;
+    case 'double_debuff':   gWk(c.ev);gVl(c.ev);alog('Enemy Weakened + Vulnerable!','#ff88ff');break;
+    case 'sacrifice':
+      G.hp=Math.max(1,G.hp-c.ev[0]);alog('You sacrifice '+c.ev[0]+' HP!','#ff8844');
+      dealDmg(c.ev[1]*m);break;
+    case 'execute':
+      let exDmg=(G.godHP/G.godMaxHP*100)<c.ev[2]?c.ev[1]:c.ev[0];
+      alog(exDmg===c.ev[1]?'⚔️ EXECUTE!':'Execute ready below '+c.ev[2]+'% HP.','#FFD700');
+      dealDmg(exDmg*m);break;
+    case 'coin_flip':
+      if(rnd(0,1)){dealDmg(c.ev*m);alog('🪙 HEADS — '+c.ev+' damage!','#FFD700');}
+      else{healHP(c.ev);alog('🪙 TAILS — Heal '+c.ev+'!','#44ff88');}break;
+    case 'overdrive':
+      G.hp=Math.max(1,G.hp-c.ev[0]);
+      G.strength+=c.ev[1];G.mana=clamp(G.mana+c.ev[2],0,10);
+      alog('Overdrive! +'+c.ev[1]+' Str, +'+c.ev[2]+' mana!','#FFD700');break;
+    case 'quake':
+      G.hp=Math.max(1,G.hp-c.ev[0]);alog('Quake costs '+c.ev[0]+' HP!','#ff8844');
+      dealDmg(c.ev[1]*m);gVl(2);break;
+    case 'damage_cleanse':
+      dealDmg(c.ev*m);G.pWeak=0;G.pVuln=0;alog('Attack + debuffs removed!','#44ff88');break;
   }
   render();checkBattleEnd();
 }
@@ -918,11 +1023,13 @@ function showResultCutscene(vids,title,titleColor,subtitle,cb){
   // Pause music slightly during cutscene
   if(_musicEl){_musicEl.volume=0.1;}
   _resultCB=cb;
+  // Remove any stale result overlay
+  let stale=document.getElementById('resultCS');if(stale)stale.remove();
   let src=vids[rnd(0,vids.length-1)];
   let el=document.createElement('div');
   el.className='cutscene';el.id='resultCS';
   el.innerHTML=`
-    <video id="resultVid" autoplay playsinline
+    <video id="resultVid" playsinline
       style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">
       <source src="${src}" type="video/mp4">
     </video>
@@ -940,9 +1047,9 @@ function showResultCutscene(vids,title,titleColor,subtitle,cb){
       </button>
     </div>`;
   document.body.appendChild(el);
-  // Auto-advance when video ends
+  // Explicit .play() AND wire ended event after DOM insertion
   let vid=document.getElementById('resultVid');
-  if(vid)vid.addEventListener('ended',proceedResult);
+  if(vid){vid.play().catch(()=>{});vid.addEventListener('ended',proceedResult);}
   // Safety fallback — max 12 seconds
   _resultTimer=setTimeout(proceedResult,12000);
 }
@@ -985,13 +1092,16 @@ function getRewardPool(){
 
 /* ─── GOD PRE-BATTLE CUTSCENE ─── */
 function showGodCutscene(idx){
+  if(!G.hero){G.screen='map';render();return;}  // guard: hero must be set
   if(!_audioOn)initAudio();
   sfx('fight');
   let god=GODS[idx];let hero=G.hero;
+  // Remove any stale overlay
+  let stale=document.getElementById('godCS');if(stale)stale.remove();
   let el=document.createElement('div');
   el.className='cutscene';el.id='godCS';
   el.innerHTML=`
-    <video class="cs-vid" autoplay loop playsinline>
+    <video class="cs-vid" loop playsinline>
       <source src="${god.video}" type="video/mp4">
     </video>
     <div class="cs-bg"></div>
@@ -1001,7 +1111,7 @@ function showGodCutscene(idx){
         <div style="text-align:center;">
           <div style="font-size:36px;filter:drop-shadow(0 0 8px ${hero.color});">${hero.icon}</div>
           <div style="font-size:7px;color:${hero.color};margin-top:4px;">${hero.name}</div>
-          <div style="font-size:5px;color:#778;margin-top:2px;">❤️ ${G.hp}/${G.maxHP}</div>
+          <div style="font-size:5px;color:#778;margin-top:2px;">❤️ ${G.hp}/${G.maxHP||hero.maxHP}</div>
         </div>
         <div style="font-size:18px;color:var(--gold);text-shadow:0 0 20px var(--gold),
           0 0 40px var(--gold2);letter-spacing:4px;">VS</div>
@@ -1025,6 +1135,9 @@ function showGodCutscene(idx){
       </div>
     </div>`;
   document.body.appendChild(el);
+  // Explicit play() — autoplay attribute alone is unreliable on dynamic insertion
+  let vid=el.querySelector('video');
+  if(vid)vid.play().catch(()=>{});
   setTimeout(()=>{let b=document.getElementById('fightBtnWrap');if(b)b.style.opacity='1';},1400);
 }
 
@@ -1245,7 +1358,7 @@ function confirmHero(){
   let el=document.createElement('div');
   el.className='cutscene';el.id='csOverlay';
   el.innerHTML=`
-    <video id="csVid" autoplay playsinline
+    <video id="csVid" playsinline
       style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.72;">
       <source src="${h.video}" type="video/mp4">
     </video>
@@ -1270,6 +1383,9 @@ function confirmHero(){
       </div>
     </div>`;
   document.body.appendChild(el);
+  // Explicit .play() — more reliable than autoplay attr on dynamically created elements
+  let vid=document.getElementById('csVid');
+  if(vid)vid.play().catch(()=>{});
 }
 
 function finishHeroSelect(){
