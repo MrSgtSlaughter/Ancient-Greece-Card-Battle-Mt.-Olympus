@@ -4,7 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Mt. Olympus Ascent</title>
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"></noscript>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 :root{
@@ -329,9 +332,22 @@ input::placeholder{color:#3344aa;}
 <body>
 <div id="bgLayer" style="position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;"></div>
 <div id="game" style="position:relative;z-index:1;max-width:820px;margin:0 auto;padding:8px;"></div>
-<button id="musicBtn" onclick="toggleMusic()" title="Toggle background music">♪ MUSIC</button>
+<button type="button" id="musicBtn" onclick="toggleMusic()" title="Toggle background music">♪ MUSIC</button>
 <script>
 'use strict';
+// Global error handler — if JS crashes, show a message instead of blank screen
+window.onerror=function(msg,src,line,col,err){
+  var g=document.getElementById('game');
+  if(g)g.innerHTML='<div style="padding:40px;text-align:center;font-family:monospace;color:#ff4444;">'
+    +'<div style="font-size:14px;margin-bottom:12px;">⚠ Something went wrong</div>'
+    +'<div style="font-size:10px;color:#888;margin-bottom:20px;">'+msg+'</div>'
+    +'<button type="button" onclick="location.reload()" style="padding:10px 20px;cursor:pointer;font-size:12px;">↺ Reload Game</button>'
+    +'</div>';
+  return false;
+};
+window.onunhandledrejection=function(e){
+  console.warn('Unhandled promise rejection:',e.reason);
+};
 const FIREBASE='https://minigolf-fd9ea-default-rtdb.firebaseio.com';
 
 /* ═══════════════ AUDIO SYSTEM ═══════════════ */
@@ -1081,7 +1097,7 @@ function showResultCutscene(vids,title,titleColor,subtitle,cb){
       <div style="font-size:6px;color:#aaa;margin-top:8px;letter-spacing:2px;">${subtitle}</div>
     </div>
     <div style="position:absolute;bottom:28px;left:0;right:0;text-align:center;z-index:2;">
-      <button class="btn sm" onclick="proceedResult()" style="opacity:.7;font-size:7px;">
+      <button type="button" class="btn sm" onclick="proceedResult()" style="opacity:.7;font-size:7px;">
         SKIP ▶▶
       </button>
     </div>`;
@@ -1166,11 +1182,11 @@ function showGodCutscene(idx){
       <div style="font-size:5px;color:#778;font-style:italic;margin-bottom:24px;
         max-width:340px;line-height:2;">"${god.flavor}"</div>
       <div id="fightBtnWrap" style="opacity:0;transition:opacity .6s;">
-        <button class="btn primary" onclick="beginFight(${idx})"
+        <button type="button" class="btn primary" onclick="beginFight(${idx})"
           style="font-size:11px;padding:14px 32px;letter-spacing:3px;">
           ⚔️ FIGHT!
         </button>
-        <button class="btn" onclick="document.getElementById('godCS').remove();"
+        <button type="button" class="btn" onclick="document.getElementById('godCS').remove();"
           style="margin-left:10px;font-size:7px;">
           ← BACK
         </button>
@@ -1264,7 +1280,18 @@ function mkHandCard(id, i){
 
 /* ═══════════════ RENDER ENGINE ═══════════════ */
 const R=document.getElementById('game');
+// Show errors on screen so school Chromebooks don't just show a blank page
+window.onerror=function(msg,src,line){
+  if(R)R.innerHTML=`<div style="padding:24px;color:#f55;font-family:monospace;font-size:11px;background:#0a0a18;min-height:100vh;">
+    <div style="color:#f8c;font-size:14px;margin-bottom:12px;">⚠ GAME ERROR</div>
+    ${String(msg).slice(0,200)}<br>Line ${line}<br><br>
+    <button type="button" onclick="location.reload()" style="padding:8px 16px;background:#4a2;color:#fff;border:none;cursor:pointer;">↺ RELOAD</button>
+  </div>`;
+  return true;
+};
 function render(){
+  if(!R)return;
+  try{
   window.scrollTo(0,0);
   switch(G.screen){
     case 'title':       renderTitle();break;
@@ -1277,6 +1304,16 @@ function render(){
     case 'victory':     renderVictory();break;
     case 'deck_view':   renderDeckView();break;
     case 'leaderboard': renderLeaderboard();break;
+  }
+  // School proxy (GoGuardian/Securly) injects <form> wrappers — force all buttons to type=button
+  // after each render so clicking never triggers a form submit / page reload
+  document.querySelectorAll('#game button:not([type])').forEach(b=>{b.type='button';});
+  }catch(e){
+    R.innerHTML=`<div style="padding:24px;color:#f55;font-family:monospace;font-size:11px;background:#0a0a18;min-height:100vh;">
+      <div style="color:#f8c;font-size:14px;margin-bottom:12px;">⚠ RENDER ERROR (screen: ${G.screen})</div>
+      ${String(e).slice(0,300)}<br><br>
+      <button type="button" onclick="G.screen='title';render()" style="padding:8px 16px;background:#4a2;color:#fff;border:none;cursor:pointer;">↺ BACK TO TITLE</button>
+    </div>`;
   }
 }
 
@@ -1300,11 +1337,11 @@ function renderTitle(){
       Answer trivia. Play cards. Defeat the gods.<br>
       Climb Mt. Olympus. Face Zeus.
     </div>
-    <button class="btn primary" onclick="initAudio();G.screen='name_entry';render();"
+    <button type="button" class="btn primary" onclick="initAudio();G.screen='name_entry';render();"
       style="font-size:10px;padding:14px 28px;margin-bottom:10px;letter-spacing:2px;">
       ▶ START GAME
     </button>
-    <button class="btn blue" onclick="initAudio();G.lbGodIdx=0;G.screen='leaderboard';renderLeaderboard();">
+    <button type="button" class="btn blue" onclick="initAudio();G.lbGodIdx=0;G.screen='leaderboard';renderLeaderboard();">
       🏆 LEADERBOARD
     </button>
     <div style="margin-top:28px;font-size:4.5px;color:#1a1a33;">
@@ -1325,12 +1362,12 @@ function renderNameEntry(){
       text-transform:uppercase;letter-spacing:2px;">Select Class Period:</div>
     <div class="period-btns" style="margin-bottom:24px;">
       ${['1st','2nd','5th','6th'].map(p=>`
-        <button class="btn ${G.period===p?'primary':''}" onclick="G.period='${p}';render();">
+        <button type="button" class="btn ${G.period===p?'primary':''}" onclick="G.period='${p}';render();">
           ${p} Hour
         </button>`).join('')}
     </div>
-    <button class="btn primary" onclick="confirmName()">CONTINUE ▶</button>
-    <button class="btn" onclick="G.screen='title';render();" style="margin-top:8px;">◀ BACK</button>
+    <button type="button" class="btn primary" onclick="confirmName()">CONTINUE ▶</button>
+    <button type="button" class="btn" onclick="G.screen='title';render();" style="margin-top:8px;">◀ BACK</button>
   </div>`;
 }
 async function confirmName(){
@@ -1382,12 +1419,12 @@ function renderHeroSelect(){
         </div>`).join('')}
     </div>
     ${G.hero?`<div style="text-align:center;margin-top:16px;">
-      <button class="btn primary" onclick="confirmHero()" style="font-size:10px;padding:12px 22px;">
+      <button type="button" class="btn primary" onclick="confirmHero()" style="font-size:10px;padding:12px 22px;">
         BEGIN WITH ${G.hero.name.toUpperCase()} ▶
       </button>
     </div>`:''}
     <div style="text-align:center;margin-top:8px;">
-      <button class="btn" onclick="G.screen='name_entry';render();">◀ BACK</button>
+      <button type="button" class="btn" onclick="G.screen='name_entry';render();">◀ BACK</button>
     </div>
   </div>`;
 }
@@ -1419,11 +1456,11 @@ function confirmHero(){
       <div style="font-size:5.5px;color:#778;font-style:italic;margin-bottom:28px;
         max-width:340px;line-height:2;">${h.flavor}</div>
       <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-        <button class="btn primary" onclick="finishHeroSelect()"
+        <button type="button" class="btn primary" onclick="finishHeroSelect()"
           style="font-size:10px;padding:14px 28px;">
           BEGIN ASCENT ▶
         </button>
-        <button class="btn" onclick="document.getElementById('csOverlay').remove();">
+        <button type="button" class="btn" onclick="document.getElementById('csOverlay').remove();">
           ◀ BACK
         </button>
       </div>
@@ -1474,7 +1511,7 @@ function renderMap(){
       <div style="font-size:5.5px;color:var(--muted);margin-bottom:6px;">
         ⛺ CAMPFIRE — Rest before climbing?
       </div>
-      <button class="btn green sm" onclick="restHeal()">
+      <button type="button" class="btn green sm" onclick="restHeal()">
         REST (+${Math.floor(G.maxHP*.3)} HP)
       </button>
     </div>`:''}
@@ -1503,9 +1540,9 @@ function renderMap(){
       ⚔️ START HERE
     </div>
     <div style="display:flex;gap:6px;margin-top:16px;justify-content:center;flex-wrap:wrap;">
-      <button class="btn blue sm" onclick="G.screen='deck_view';render();">📦 VIEW DECK</button>
-      <button class="btn sm" onclick="G.lbGodIdx=0;G.screen='leaderboard';renderLeaderboard();">🏆 SCORES</button>
-      <button class="btn sm" onclick="G.screen='title';render();">🏠 TITLE</button>
+      <button type="button" class="btn blue sm" onclick="G.screen='deck_view';render();">📦 VIEW DECK</button>
+      <button type="button" class="btn sm" onclick="G.lbGodIdx=0;G.screen='leaderboard';renderLeaderboard();">🏆 SCORES</button>
+      <button type="button" class="btn sm" onclick="G.screen='title';render();">🏠 TITLE</button>
     </div>
   </div>`;
 }
@@ -1664,7 +1701,7 @@ function renderTrivia(){
       <div style="font-size:8px;color:#44ff88;margin-bottom:12px;">
         ✅ CORRECT! YOUR TURN!
       </div>
-      <button class="btn primary" onclick="G.phase='play';render();">PLAY CARDS ▶</button>
+      <button type="button" class="btn primary" onclick="G.phase='play';render();">PLAY CARDS ▶</button>
     </div>`;
   }
   return`<div class="trivia-box">
@@ -1672,7 +1709,7 @@ function renderTrivia(){
     <div class="t-q">${q.q}</div>
     <div class="t-choices">
       ${q.c.map((ch,i)=>`
-        <button class="t-btn" id="tc${i}" onclick="answerTrivia(${i})">
+        <button type="button" class="t-btn" id="tc${i}" onclick="answerTrivia(${i})">
           ${['A','B','C','D'][i]}) ${ch}
         </button>`).join('')}
     </div>
@@ -1692,7 +1729,7 @@ function renderPlay(){
       ${G.hand.map((id,i)=>mkHandCard(id,i)).join('')}
     </div>
     <div style="text-align:center;margin-top:6px;">
-      <button class="btn red" onclick="endPlayerTurn()">END TURN ⏭️</button>
+      <button type="button" class="btn red" onclick="endPlayerTurn()">END TURN ⏭️</button>
     </div>
   </div>`;
 }
@@ -1734,7 +1771,7 @@ function renderCardReward(){
       <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:16px;">
         ${G.cardRewards.map(id=>mkCard(id,`pickCard('${id}')`)).join('')}
       </div>
-      <button class="btn sm" onclick="skipCardPick()">SKIP — No new card</button>
+      <button type="button" class="btn sm" onclick="skipCardPick()">SKIP — No new card</button>
     </div>`;
   }else{
     let grouped={};G.deck.forEach(id=>{grouped[id]=(grouped[id]||0)+1;});
@@ -1754,7 +1791,7 @@ function renderCardReward(){
               ${ct}</div>`:''}
           </div>`).join('')}
       </div>
-      <button class="btn green" onclick="finishReward()">KEEP DECK — Continue ▶</button>
+      <button type="button" class="btn green" onclick="finishReward()">KEEP DECK — Continue ▶</button>
     </div>`;
   }
 }
@@ -1785,7 +1822,7 @@ function renderDeckView(){
         </div>`).join('')}
     </div>
     <div style="text-align:center;">
-      <button class="btn" onclick="G.screen='map';render();">◀ BACK TO MAP</button>
+      <button type="button" class="btn" onclick="G.screen='map';render();">◀ BACK TO MAP</button>
     </div>
   </div>`;
 }
@@ -1808,11 +1845,11 @@ function renderGameOver(){
     </div>
     <div class="divider">· · · · ·</div>
     <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px;">
-      <button class="btn primary" onclick="retryBattle()">↺ RETRY (50% HP)</button>
-      <button class="btn green" onclick="G.screen='map';G.hp=G.maxHP;render();">
+      <button type="button" class="btn primary" onclick="retryBattle()">↺ RETRY (50% HP)</button>
+      <button type="button" class="btn green" onclick="G.screen='map';G.hp=G.maxHP;render();">
         🗺️ MAP (Full HP)
       </button>
-      <button class="btn" onclick="G.screen='title';render();">🏠 TITLE</button>
+      <button type="button" class="btn" onclick="G.screen='title';render();">🏠 TITLE</button>
     </div>
   </div>`;
 }
@@ -1838,7 +1875,7 @@ function renderVictory(){
     <div style="font-size:8px;color:var(--gold);margin-bottom:20px;">
       "${G.playerName}" has ascended to Olympus!
     </div>
-    <button class="btn primary" onclick="G.screen='title';render();">🏠 PLAY AGAIN</button>
+    <button type="button" class="btn primary" onclick="G.screen='title';render();">🏠 PLAY AGAIN</button>
   </div>`;
 }
 
@@ -1854,7 +1891,7 @@ async function renderLeaderboard(){
     </div>
     <div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center;margin-bottom:14px;">
       ${GODS.map((g,i)=>`
-        <button class="btn sm ${i===G.lbGodIdx?'primary':''}"
+        <button type="button" class="btn sm ${i===G.lbGodIdx?'primary':''}"
           onclick="G.lbGodIdx=${i};renderLeaderboard();">
           ${g.icon}${g.name.split(' ')[0]}
         </button>`).join('')}
@@ -1869,7 +1906,7 @@ async function renderLeaderboard(){
       Loading...
     </div>
     <div style="text-align:center;margin-top:16px;">
-      <button class="btn" onclick="G.screen='title';render();">◀ BACK</button>
+      <button type="button" class="btn" onclick="G.screen='title';render();">◀ BACK</button>
     </div>
   </div>`;
   let entries=await getBoard(god.id);
@@ -1896,7 +1933,7 @@ async function renderLeaderboard(){
   </table>`;
 }
 
-render();
+try{render();}catch(e){if(R)R.innerHTML='<div style="padding:24px;color:#f55;font-family:monospace;font-size:13px;">STARTUP ERROR: '+e+'</div>';}
 </script>
 </body>
 </html>
