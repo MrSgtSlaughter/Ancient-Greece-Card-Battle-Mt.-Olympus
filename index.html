@@ -94,7 +94,7 @@ html,body{background:var(--dark);color:var(--text);font-family:'Press Start 2P',
   border-radius:2px;overflow:hidden;display:flex;align-items:center;
   justify-content:center;
 }
-.c-artbg{position:absolute;inset:0;opacity:.88;}
+.c-artbg{position:absolute;top:0;left:0;right:0;bottom:0;opacity:.88;}
 .c-artbg.atk{background:radial-gradient(ellipse at 50% 60%,#ff6622,#bb1100 55%,#440000);}
 .c-artbg.def{background:radial-gradient(ellipse at 50% 60%,#44aaff,#1155bb 55%,#002255);}
 .c-artbg.spc{background:radial-gradient(ellipse at 50% 60%,#cc55ff,#7711cc 55%,#220044);}
@@ -133,11 +133,11 @@ html,body{background:var(--dark);color:var(--text);font-family:'Press Start 2P',
   border:2px solid var(--gold);margin-bottom:8px;
 }
 .god-bg-vid{
-  position:absolute;inset:0;width:100%;height:100%;
+  position:absolute;top:0;left:0;right:0;bottom:0;width:100%;height:100%;
   object-fit:cover;opacity:.42;z-index:0;
 }
 .god-vignette{
-  position:absolute;inset:0;z-index:1;
+  position:absolute;top:0;left:0;right:0;bottom:0;z-index:1;
   background:linear-gradient(to bottom,rgba(0,0,0,.1) 0%,rgba(0,0,0,.7) 100%);
 }
 .god-stats{
@@ -250,7 +250,7 @@ html,body{background:var(--dark);color:var(--text);font-family:'Press Start 2P',
 .hero-pick:hover{transform:scale(1.06);}
 .hero-pick.sel{transform:scale(1.08);}
 .hero-pick-vid{
-  position:absolute;inset:0;width:100%;height:100%;
+  position:absolute;top:0;left:0;right:0;bottom:0;width:100%;height:100%;
   object-fit:cover;opacity:.22;z-index:0;pointer-events:none;
 }
 .hero-pick-body{position:relative;z-index:1;}
@@ -268,12 +268,12 @@ html,body{background:var(--dark);color:var(--text);font-family:'Press Start 2P',
 
 /* ═══ CUTSCENE OVERLAY ═══ */
 .cutscene{
-  position:fixed;inset:0;background:#000;z-index:500;
+  position:fixed;top:0;left:0;right:0;bottom:0;background:#000;z-index:500;
   display:flex;flex-direction:column;align-items:center;
   justify-content:center;
 }
 .cs-vid{
-  position:absolute;inset:0;width:100%;height:100%;
+  position:absolute;top:0;left:0;right:0;bottom:0;width:100%;height:100%;
   object-fit:cover;opacity:.7;
 }
 .cs-ui{
@@ -285,7 +285,7 @@ html,body{background:var(--dark);color:var(--text);font-family:'Press Start 2P',
   to{opacity:1;transform:translateY(0);}
 }
 .cs-bg{
-  position:absolute;inset:0;
+  position:absolute;top:0;left:0;right:0;bottom:0;
   background:linear-gradient(to top,rgba(0,0,0,.9) 0%,transparent 60%);
   z-index:0;
 }
@@ -336,7 +336,7 @@ input::placeholder{color:#3344aa;}
 </style>
 </head>
 <body>
-<div id="bgLayer" style="position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;"></div>
+<div id="bgLayer" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:0;overflow:hidden;pointer-events:none;"></div>
 <div id="game" style="position:relative;z-index:1;max-width:820px;margin:0 auto;padding:8px;"></div>
 <button type="button" id="musicBtn" onclick="toggleMusic()" title="Toggle background music">♪ MUSIC</button>
 <script>
@@ -1156,7 +1156,7 @@ function showResultCutscene(vids,title,titleColor,subtitle,cb){
   el.className='cutscene';el.id='resultCS';
   el.innerHTML=`
     <video id="resultVid" playsinline
-      style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">
+      style="position:absolute;top:0;left:0;right:0;bottom:0;width:100%;height:100%;object-fit:cover;">
       <source src="${src}" type="video/mp4">
     </video>
     <div class="cs-bg"></div>
@@ -1402,14 +1402,13 @@ function render(){
 // Title + name entry are ONE screen. No extra button click needed.
 // Students see the logo AND the name input the moment the game loads.
 function renderTitle(){
-  _titleBg=BGVIDS[rnd(0,BGVIDS.length-1)];
-  setBgVideo(_titleBg, 0.28);
+  setBgVideo(null); // clear background video — Chromebooks show it instead of game UI
   var nameEl=document.getElementById('nameIn');
-  if(nameEl&&nameEl.value.trim())G.playerName=nameEl.value.trim();
+  if(nameEl&&nameEl.value&&nameEl.value.trim())G.playerName=nameEl.value.trim();
   R.innerHTML=`
   <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;
     justify-content:center;text-align:center;padding:20px;
-    background:radial-gradient(ellipse at 50% 30%,rgba(26,16,48,.85) 0%,rgba(7,7,16,.92) 70%);">
+    background:#07070f;">
     <div style="font-size:44px;margin-bottom:8px;filter:drop-shadow(0 0 20px #FFD700);">⚡🏔️⚡</div>
     <div style="font-size:13px;color:var(--gold);animation:titleGlow 2s infinite;margin-bottom:3px;
       letter-spacing:4px;">MT. OLYMPUS</div>
@@ -1444,8 +1443,6 @@ function renderTitle(){
       © 2026 Jason Slaughter · PixelED Path, LLC
     </div>
   </div>`;
-  var inp=document.getElementById('nameIn');
-  if(inp){try{inp.focus();}catch(e){} if(inp.value){var v=inp.value;inp.value='';inp.value=v;}}
 }
 
 /* ─── NAME ENTRY ─── */
@@ -1454,7 +1451,7 @@ function renderNameEntry(){
   G.screen='title';renderTitle();return;
   // Preserve any name the student has already typed before re-render
   var nameEl=document.getElementById('nameIn');
-  if(nameEl&&nameEl.value.trim())G.playerName=nameEl.value.trim();
+  if(nameEl&&nameEl.value&&nameEl.value.trim())G.playerName=nameEl.value.trim();
   R.innerHTML=`
   <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;
     justify-content:center;padding:20px;text-align:center;">
@@ -1548,7 +1545,7 @@ function confirmHero(){
   el.className='cutscene';el.id='csOverlay';
   el.innerHTML=`
     <video id="csVid" playsinline
-      style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.72;">
+      style="position:absolute;top:0;left:0;right:0;bottom:0;width:100%;height:100%;object-fit:cover;opacity:.72;">
       <source src="${h.video}" type="video/mp4">
     </video>
     <div class="cs-bg"></div>
